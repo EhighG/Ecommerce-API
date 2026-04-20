@@ -1,0 +1,24 @@
+spring:
+  config:
+    import: classpath:application-secret.yaml
+
+  datasource:
+    url: jdbc:mysql://${RDB_HOST}:${RDB_PORT}/${RDB_NAME}
+    username: ${RDB_USERNAME}
+    password: ${RDB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      timeout: 3s
+
+app:
+  storage:
+    gcs:
+      project-id: ${GCP_PROJECT_ID}
+      bucket: ${GCS_BUCKET}
+      upload-prefix: ${GCS_UPLOAD_PREFIX}
+      public-base-url: https://storage.googleapis.com/${GCS_BUCKET}
