@@ -66,4 +66,7 @@ jobs:
 
       - name: Deploy to app VM
         run: |
-          gcloud compute ssh "$INSTANCE_NAME" --zone "$ZONE" --tunnel-through-iap --command "cd /opt/ecommerce && docker compose pull app && docker compose up -d app redis"
+          gcloud compute ssh "$INSTANCE_NAME" \
+            --zone "$ZONE" \
+            --tunnel-through-iap \
+            --command "sudo bash -lc 'cd /opt/ecommerce && docker compose pull app && docker compose up -d app redis'"
