@@ -1,6 +1,8 @@
 name: Backend Deploy
 
 on:
+  push:
+    branches: ["release"]
   workflow_dispatch:
 
 jobs:
@@ -19,7 +21,6 @@ jobs:
       REPOSITORY: ${{ vars.ARTIFACT_REPOSITORY }}
       IMAGE_NAME: ${{ vars.API_SERVER_IMAGE_NAME }}
       IMAGE_URI: asia-northeast3-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPOSITORY }}/${{ vars.API_SERVER_IMAGE_NAME }}
-
 
     steps:
       - name: Checkout
