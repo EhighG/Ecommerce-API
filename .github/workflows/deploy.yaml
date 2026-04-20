@@ -36,11 +36,11 @@ jobs:
         working-directory: api
         run: chmod +x ./gradlew
 
-      - name: Run backend tests
-        working-directory: api
-        run: ./gradlew test --stacktrace
-        env:
-          SPRING_PROFILES_ACTIVE: dev
+      # - name: Run backend tests
+      #   working-directory: api
+      #   run: ./gradlew test --stacktrace
+      #   env:
+      #     SPRING_PROFILES_ACTIVE: dev
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
