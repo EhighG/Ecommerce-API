@@ -19,4 +19,6 @@ public interface UploadedImageRepository extends JpaRepository<UploadedImage, Lo
             where ui.id in :imageIds
             """)
     void detachAllByIdIn(@Param("imageIds") List<Long> imageIds);
+
+    List<UploadedImage> findAllByOrderByIdAsc();
 }

@@ -12,6 +12,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RequiredArgsConstructor
 @RequestMapping("/users")
 @RestController
@@ -29,6 +31,18 @@ public class UserController {
     public ResponseEntity<UserProfileRes> getUserProfile(@PathVariable Long userId) {
         return ResponseEntity
                 .ok(userService.getUserProfile(userId));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserProfileRes> getMyProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity
+                .ok(userService.getUserProfile(userDetails.getUserId()));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<UserInfoListRes>> getUserInfoList(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity
+                .ok(userService.getUserInfoList(userDetails.getUserRole()));
     }
 
     @PatchMapping("/me")

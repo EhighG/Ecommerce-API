@@ -1,19 +1,15 @@
 package com.ecommerce.api.media.controller;
 
 import com.ecommerce.api.auth.domain.CustomUserDetails;
-import com.ecommerce.api.media.dto.CompleteUploadReq;
-import com.ecommerce.api.media.dto.CompleteUploadRes;
-import com.ecommerce.api.media.dto.CreateUploadUrlReq;
-import com.ecommerce.api.media.dto.CreateUploadUrlRes;
+import com.ecommerce.api.media.dto.*;
 import com.ecommerce.api.media.service.MediaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @RequestMapping("/media")
@@ -35,5 +31,11 @@ public class MediaController {
                                                             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity
                 .ok(mediaService.completeUpload(req, userDetails.getUserId()));
+    }
+
+    @GetMapping("/uploaded-images")
+    public ResponseEntity<List<UploadedImageListRes>> getUploadedImages() {
+        return ResponseEntity
+                .ok(mediaService.getUploadedImages());
     }
 }

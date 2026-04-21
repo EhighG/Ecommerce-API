@@ -8,6 +8,14 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface ProductImageRepository extends JpaRepository<ProductImage, Long> {
+
+    @Query("""
+            select pi
+            from ProductImage pi
+            join fetch pi.uploadedImage ui
+            where pi.productId = :productId
+            order by pi.displayOrder asc
+            """)
     List<ProductImage> findAllByProductIdOrderByDisplayOrderAsc(Long productId);
 
     @Query("""

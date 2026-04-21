@@ -42,6 +42,7 @@ public class ProductDeletionService {
         List<Long> uploadedImageIdList = productImageRepository.findUploadedImageIdsByProductId(product.getId());
 
         product.setThumbnailImage(null);
+        productRepository.flush();
 
         if (!uploadedImageIdList.isEmpty()) {
             productImageRepository.deleteAllByProductId(product.getId());

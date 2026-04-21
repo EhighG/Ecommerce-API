@@ -3,6 +3,7 @@ package com.ecommerce.api.order.vo;
 import com.ecommerce.api.product.entity.Product;
 import com.ecommerce.api.product.entity.ProductImage;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,7 +30,7 @@ public class ProductSnapshot {
     })
     private UserSnapshot seller;
 
-    @Lob
+    @Size(min = 1, max = 1000)
     @Column(name = "product_description", nullable = false)
     private String description;
 

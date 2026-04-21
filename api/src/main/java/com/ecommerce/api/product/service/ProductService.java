@@ -177,4 +177,35 @@ public class ProductService {
         return userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(USER_NOT_FOUND));
     }
+
+    /*
+    카테고리
+     */
+
+    @Transactional
+    public Long addCategory(AddCategoryReq req) {
+        if (productCategoryRepository.existsByName(req.name())) {
+            throw new AppException(PRODUCT_CATEGORY_ALREADY_EXISTS);
+        }
+
+        ProductCategory saved = productCategoryRepository.save(
+                new ProductCategory(req.name())
+        );
+
+        return saved.getId();
+    }
+
+    public List<CategorySummary> getCategories() {
+        return productCategoryRepository.findAllByOrderByIdAsc().stream()
+                .map(CategorySummary::new)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteCategory(Long categoryId) {
+        ProductCategory category = productCategoryRepository.findById(categoryId)
+                .orElseThrow(() -> new AppException(PRODUCT_CATEGORY_NOT_FOUND));
+
+        productCategoryRepository.delete(category);
+    }
 }

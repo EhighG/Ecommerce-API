@@ -46,6 +46,15 @@ public class SecurityConfig {
         return PATH.matcher(pattern);
     }
 
+    private static RequestMatcher[] adminMatchers() {
+        return new RequestMatcher[] {
+                matcher(POST, "/products/category"),
+                matcher(DELETE, "/products/category/{categoryId}"),
+                matcher(GET, "/media/uploaded-images"),
+                matcher(GET, "/users"),
+        };
+    }
+
     private static RequestMatcher[] allMatchers() {
         return new RequestMatcher[] {
                 matcher(GET, "/auth/csrf"),
@@ -56,6 +65,7 @@ public class SecurityConfig {
 
                 matcher(GET, "/products"),
                 matcher(GET, "/products/{productId}"),
+                matcher(GET, "/products/category"),
 
                 matcher(GET, "/reviews"),
         };
@@ -135,6 +145,8 @@ public class SecurityConfig {
                 )
                 // URL 인가 규칙
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers(adminMatchers()).hasRole(UserRole.ADMIN.name())
                         .requestMatchers(allMatchers()).permitAll()
                         .requestMatchers(buyerMatchers()).hasRole(UserRole.BUYER.name())
                         .requestMatchers(sellerMatchers()).hasRole(UserRole.SELLER.name())

@@ -10,12 +10,15 @@ ALL -> 인증 없이도(=유저 아니어도) 가능.
 USER -> 인증된 모든 유저
 BUYER -> 구매자
 SELLER -> 판매자
+ADMIN -> 관리자
 
 ## User
 
 | 기능명      | API                            | 완성여부 | 권한  |
 | -------- | ------------------------------ | ---- | --- |
 | 회원 정보 조회 | `GET /api/users/{userId}`      | O    | USER   |
+| 내 회원 정보 조회 | `GET /api/users/me`          | O    | USER   |
+| 회원 목록 조회 | `GET /api/users`              | O    | ADMIN  |
 | 회원가입     | `POST /api/users`              | O    | ALL   |
 | 회원정보 수정  | `PATCH /api/users/me`          | O    | USER   |
 | 비밀번호 변경  | `PATCH /api/users/me/password` | O    | USER   |
@@ -25,6 +28,7 @@ SELLER -> 판매자
 
 | 기능명  | API                     | 완성여부 | 권한  |
 | ---- | ----------------------- | ---- | --- |
+| CSRF 토큰 조회 | `GET /api/auth/csrf` | O | ALL |
 | 로그인  | `POST /api/auth/login`  | O    | ALL |
 | 로그아웃 | `POST /api/auth/logout` | O    | ALL |
 
@@ -39,6 +43,14 @@ SELLER -> 판매자
 | 상품 재고 수정           | `PATCH /api/products/inventory`          | O    | SELLER   |
 | 상품 이미지 수정          | `PATCH /api/products/{productId}/images` | O    | SELLER   |
 | 상품 삭제              | `DELETE /api/products/{productId}`       | O    | SELLER   |
+| 상품 카테고리 생성          | `POST /api/products/category`            | O    | ADMIN    |
+| 상품 카테고리 목록 조회       | `GET /api/products/category`             | O    | ALL      |
+| 상품 카테고리 삭제          | `DELETE /api/products/category/{categoryId}` | O | ADMIN |
+
+- `GET /api/products` 조회 방식
+  - 검색 조건: 상품명/설명 키워드, 판매자 ID, 카테고리 ID
+  - 정렬 기준: `ORDER_COUNT`, `RATING`, `VIEW_COUNT`, `PRICE`, `REG_DATE`
+  - 정렬 방향: `ASC`, `DESC`
 
 ## Media
 
@@ -46,6 +58,7 @@ SELLER -> 판매자
 | ------------- | -------------------------------- | ---- | --- |
 | 이미지 업로드 URL 생성 | `POST /api/media/upload-url`      | O    | SELLER |
 | 이미지 업로드 완료 처리 | `POST /api/media/upload-complete` | O    | SELLER |
+| 업로드 이미지 목록 조회 | `GET /api/media/uploaded-images` | O    | ADMIN  |
 
 ## Cart
 
