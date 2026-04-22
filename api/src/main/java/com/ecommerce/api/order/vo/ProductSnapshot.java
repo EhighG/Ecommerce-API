@@ -31,7 +31,7 @@ public class ProductSnapshot {
     private UserSnapshot seller;
 
     @Size(min = 1, max = 1000)
-    @Column(name = "product_description", nullable = false)
+    @Column(name = "product_description", length = 1000, nullable = false)
     private String description;
 
     @Column(name = "product_unit_price", nullable = false)

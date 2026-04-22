@@ -70,10 +70,15 @@ public class MediaService {
     }
 
     @Transactional(readOnly = true)
-    public List<UploadedImageListRes> getUploadedImages() {
+    public List<UploadedImageListRes> getUploadedImageInfoList() {
         return uploadedImageRepository.findAllByOrderByIdAsc().stream()
                 .map(UploadedImageListRes::new)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UploadedImage> getUploadedImages(List<Long> imageIds) {
+        return uploadedImageRepository.findAllById(imageIds);
     }
 
     @Transactional(readOnly = true)

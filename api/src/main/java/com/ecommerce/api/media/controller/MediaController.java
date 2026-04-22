@@ -34,8 +34,8 @@ public class MediaController {
     }
 
     @GetMapping("/uploaded-images")
-    public ResponseEntity<List<UploadedImageListRes>> getUploadedImages() {
+    public ResponseEntity<List<UploadedImageListRes>> getUploadedImageInfoList() {
         return ResponseEntity
-                .ok(mediaService.getUploadedImages());
+                .ok(mediaService.getUploadedImageInfoList());
     }
 }

@@ -18,7 +18,8 @@ spring:
         highlight_sql: true
         use_sql_comments: true
         generate_statistics: true
-        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 100
+
+        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 1000
 
   data:
     redis:

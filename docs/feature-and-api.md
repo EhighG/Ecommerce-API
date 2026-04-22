@@ -83,6 +83,15 @@ ADMIN -> 관리자
 | 주문항목 구매확정    | `PATCH /api/order-items/{orderItemId}/confirm` | O    | BUYER   |
 | 주문항목 취소      | `PATCH /api/order-items/{orderItemId}/cancel`  | O    | USER   |
 
+- `GET /api/order-items` 조회 방식
+  - 구매자 조회: `orderId={orderId}`
+  - 판매자 조회: `sellerId={sellerId}`
+  - 판매자 조회 시 주문상태 필터링 가능: `statusList={ORDERED|SHIPPED|DELIVERED|PURCHASE_CONFIRMED|CANCELED}`
+  - `orderId`와 `sellerId`는 동시에 사용할 수 없다.
+  - 구매자 조회에서는 `statusList`를 사용할 수 없다.
+  - 페이징은 `page`, `size`로 지정한다.
+  - 페이지 사이즈는 20(기본값)/50/100만 허용한다.
+
 아래 Payment부분은, 범위에서 제외함.
 ```
 ## Payment (범위 제외. 비활성화)

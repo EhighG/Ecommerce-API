@@ -2,14 +2,16 @@ package com.ecommerce.api.order.service;
 
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.inventory.service.InventoryService;
-import com.ecommerce.api.order.dto.OrderItemDetailRes;
-import com.ecommerce.api.order.dto.OrderItemListRes;
+import com.ecommerce.api.order.dto.*;
 import com.ecommerce.api.order.entity.OrderItem;
 import com.ecommerce.api.order.enums.OrderStatus;
 import com.ecommerce.api.order.repository.OrderItemRepository;
 import com.ecommerce.api.order.repository.OrderRepository;
 import com.ecommerce.api.product.support.ProductImageUrlResolver;
+import com.ecommerce.api.user.enums.UserRole;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,32 +25,75 @@ import static com.ecommerce.api.common.exception.ErrorCode.*;
 public class OrderItemService {
 
     private final OrderItemRepository orderItemRepository;
-    private final OrderRepository orderRepository;
     private final ProductImageUrlResolver productImageUrlResolver;
+    private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
 
-    public List<OrderItemListRes> findByOrder(Long orderId, Long userId) {
-        List<OrderItem> items = orderItemRepository.findAllByOrderId(orderId);
-
-        if (items.isEmpty()) {
-            // 실제로 주문항목 없는 주문이 있는 경우
-            if (orderRepository.findById(orderId).isPresent()) {
-                throw new IllegalStateException("Empty Order.");
+    public OrderItemSearchRes search(OrderItemSearchReq req, Long userId, UserRole role, Pageable pageable) {
+        if (req.ofBuyer()) {
+            if (!UserRole.BUYER.equals(role)) {
+                throw new AppException(NO_PERMISSIONS);
             }
-            // 주문 id가 잘못된경우
+            return searchForBuyer(req, userId, pageable);
+        } else {
+            if (!UserRole.SELLER.equals(role)) {
+                throw new AppException(NO_PERMISSIONS);
+            }
+            return searchForSeller(req, userId, pageable);
+        }
+    }
+
+    public OrderItemSearchRes searchForBuyer(OrderItemSearchReq req, Long userId, Pageable pageable) {
+        if (!orderRepository.existsByIdAndBuyerId(req.orderId(), userId)) {
             throw new AppException(ORDER_NOT_FOUND);
         }
 
+        Page<OrderItem> page = orderItemRepository.findAllByOrderAndBuyer(req.orderId(), userId, pageable);
 
-        if (!items.getFirst().getOrder().getBuyer().getId().equals(userId))
-            throw new AppException(ORDER_ACCESS_DENIED);
-
-        return items.stream()
+        List<BuyerOrderItemSearchRes.OrderItemSummary> content = page.getContent().stream()
                 .map(item -> {
                     String thumbnailUrl = productImageUrlResolver.resolveThumbnail(item.getProduct());
-                    return new OrderItemListRes(item, thumbnailUrl);
+                    return new BuyerOrderItemSearchRes.OrderItemSummary(item, thumbnailUrl);
                 })
                 .toList();
+
+        return new BuyerOrderItemSearchRes(
+                content,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.hasNext()
+        );
+    }
+
+    public OrderItemSearchRes searchForSeller(OrderItemSearchReq req, Long userId, Pageable pageable) {
+        if (!req.sellerId().equals(userId)) {
+            throw new AppException(ORDER_ACCESS_DENIED);
+        }
+
+        Page<OrderItem> page;
+        if (req.hasStatusCondition()) {
+            page = orderItemRepository.findAllBySellerAndStatusIn(req.sellerId(), req.statusList(), pageable);
+        } else {
+            page = orderItemRepository.findAllBySeller(req.sellerId(), pageable);
+        }
+
+        List<SellerOrderItemSearchRes.OrderItemSummary> content = page.getContent().stream()
+                .map(item -> {
+                    String thumbnailUrl = productImageUrlResolver.resolveThumbnail(item.getProduct());
+                    return new SellerOrderItemSearchRes.OrderItemSummary(item, thumbnailUrl);
+                })
+                .toList();
+
+        return new SellerOrderItemSearchRes(
+                content,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.hasNext()
+        );
     }
 
     // seller 입장에서의 주문항목 조회도 있어야함

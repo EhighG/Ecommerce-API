@@ -22,7 +22,7 @@ public class ProductCategory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 15)
+    @Column(nullable = false, length = 30)
     private String name;
 
     public ProductCategory(String name) {

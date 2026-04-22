@@ -51,8 +51,6 @@ public class CartItemService {
     }
 
     public List<CartItemListRes> findCartItems(Long userId) {
-        User buyer = userService.getUserNotDeleted(userId);
-
         return cartItemRepository.findAllByUserIdWithProduct(userId).stream()
                 .map(this::toCartItemListRes)
                 .toList();
@@ -65,10 +63,10 @@ public class CartItemService {
         }
 
         return new CartItemListRes(
-                item.cartItem().getId(),
+                item.cartItemId(),
                 ProductListRes.forCart(item.productListDto(), productThumbnailUrl),
-                item.cartItem().getQuantity(),
-                item.cartItem().getLinePrice()
+                item.quantity(),
+                item.linePrice()
         );
     }
 

@@ -29,7 +29,6 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductService productService;
     private final OrderItemService orderItemService;
-//    private final UserService userService;
     private final UserRepository userRepository;
     private final ProductImageUrlResolver productImageUrlResolver;
 
