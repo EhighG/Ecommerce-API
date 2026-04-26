@@ -25,3 +25,10 @@ replay_pid*
 
 # Obsidian
 **/.obsidian/
+
+# Intellij
+.idea/
+
+# ETC
+ignore/
+k6/data/

@@ -6,6 +6,10 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     name: main # add tag to HikariCP metrics
 
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
   data:
     redis:
       host: ${REDIS_HOST}

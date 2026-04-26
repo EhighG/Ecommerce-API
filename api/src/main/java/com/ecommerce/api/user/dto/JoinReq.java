@@ -18,5 +18,7 @@ public record JoinReq(
     public JoinReq {
         if (!password.equals(passwordCheck))
             throw new AppException(ErrorCode.PASSWORD_CHECK_MISMATCH);
+        if (UserRole.ADMIN.equals(role))
+            throw new AppException(ErrorCode.INVALID_INPUT);
     }
 }

@@ -13,22 +13,11 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     Optional<CartItem> findByUserIdAndProductId(Long userId, Long productId);
     Optional<CartItem> findByIdAndUserId(Long cartItemId, Long userId);
 
-//    @Query("""
-//            select ci
-//            from CartItem ci
-//            join fetch ci.product p
-//            join fetch p.category pc
-//            join fetch p.seller ps
-//            left join fetch p.thumbnailImage ti
-//            left join fetch ti.uploadedImage ui
-//            where ci.user.id = :userId
-//            order by ci.id desc
-//            """)
-//    List<CartItem> findAllByUserIdWithProduct(Long userId);
-
     @Query("""
             select new com.ecommerce.api.cartitem.dto.CartItemProductDto(
-                ci,
+                ci.id,
+                ci.quantity,
+                p.unitPrice * ci.quantity,
                 new com.ecommerce.api.product.dto.ProductListDto(
                     p.id,
                     p.name,
@@ -71,6 +60,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
             join fetch ci.product p
             join fetch p.category pc
             join fetch p.seller ps
+            left join fetch p.thumbnailImage ti
+            left join fetch ti.uploadedImage ui
             where ci.user.id = :userId
             and ci.id in :cartItemIdList
             """)
@@ -90,4 +81,11 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
             where ci.product.id = :productId
             """)
     void deleteAllByProductId(Long productId);
+
+    @Modifying
+    @Query("""
+            delete from CartItem ci
+            where ci.product.id in :productIds
+            """)
+    void deleteAllByProductIdIn(List<Long> productIds);
 }

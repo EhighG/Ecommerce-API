@@ -3,10 +3,23 @@ spring:
     import: classpath:application-secret.yaml
 
   datasource:
-    url: jdbc:mysql://${RDB_HOST}:${RDB_PORT}/${RDB_NAME}
+    url: jdbc:mysql://${RDB_HOST}:${RDB_PORT}/${RDB_NAME}?
     username: ${RDB_USERNAME}
     password: ${RDB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+        use_sql_comments: true
+        generate_statistics: true
+
+        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 1000
 
   data:
     redis:
@@ -22,3 +35,10 @@ app:
       bucket: ${GCS_BUCKET}
       upload-prefix: ${GCS_UPLOAD_PREFIX}
       public-base-url: https://storage.googleapis.com/${GCS_BUCKET}
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace
+    org.hibernate.stat: debug
+    org.springframework.transaction: debug

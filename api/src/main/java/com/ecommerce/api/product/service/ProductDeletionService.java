@@ -27,11 +27,25 @@ public class ProductDeletionService {
         productRepository.delete(product);
     }
 
+    // bulk delete
     public void deleteAllBySeller(Long sellerId) {
-        List<Product> productList = productRepository.findAllBySellerIdAndDeletedFalse(sellerId);
-        for (Product product : productList) {
-            delete(product);
+        List<Long> productIds = productRepository.findIdsBySellerIdAndDeletedFalse(sellerId);
+        if (productIds.isEmpty()) {
+            return;
         }
+
+        cartItemRepository.deleteAllByProductIdIn(productIds);
+
+        List<Long> uploadedImageIds = productImageRepository.findUploadedImageIdsByProductIdIn(productIds);
+
+        productRepository.clearThumbnailImageByIdIn(productIds);
+        productImageRepository.deleteAllByProductIdIn(productIds);
+
+        if (!uploadedImageIds.isEmpty()) {
+            mediaService.detachAllById(uploadedImageIds);
+        }
+
+        productRepository.softDeleteAllByIdIn(productIds);
     }
 
     private void removeCartItems(Long productId) {
@@ -42,6 +56,7 @@ public class ProductDeletionService {
         List<Long> uploadedImageIdList = productImageRepository.findUploadedImageIdsByProductId(product.getId());
 
         product.setThumbnailImage(null);
+        productRepository.flush();
 
         if (!uploadedImageIdList.isEmpty()) {
             productImageRepository.deleteAllByProductId(product.getId());

@@ -1,7 +1,5 @@
 package com.ecommerce.api.order.dto;
 
-import com.ecommerce.api.order.entity.Order;
-
 import java.time.Instant;
 
 public record OrderListRes(
@@ -10,12 +8,12 @@ public record OrderListRes(
         Instant orderedAt,
         int itemCount
 ) {
-    public OrderListRes(Order order) {
+    public OrderListRes(OrderListDto orderListDto) {
         this(
-                order.getId(),
-                order.getTotalPrice(),
-                order.getOrderedAt(),
-                order.getItemList().size()
+                orderListDto.orderId(),
+                orderListDto.totalPrice(),
+                orderListDto.orderedAt(),
+                Math.toIntExact(orderListDto.itemCount())
         );
     }
 }

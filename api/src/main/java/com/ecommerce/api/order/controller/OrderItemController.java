@@ -2,14 +2,16 @@ package com.ecommerce.api.order.controller;
 
 import com.ecommerce.api.auth.domain.CustomUserDetails;
 import com.ecommerce.api.order.dto.OrderItemDetailRes;
-import com.ecommerce.api.order.dto.OrderItemListRes;
+import com.ecommerce.api.order.dto.OrderItemSearchReq;
+import com.ecommerce.api.order.dto.OrderItemSearchRes;
 import com.ecommerce.api.order.service.OrderItemService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @RequestMapping("/order-items")
@@ -19,13 +21,13 @@ public class OrderItemController {
     private final OrderItemService orderItemService;
 
     @GetMapping
-    public ResponseEntity<List<OrderItemListRes>> findByOrder(@RequestParam Long orderId,
-                                                              @AuthenticationPrincipal CustomUserDetails userdetails) {
-        return ResponseEntity
-                .ok(orderItemService.findByOrder(orderId, userdetails.getUserId()));
-    }
+    public ResponseEntity<OrderItemSearchRes> findOrderItems(@Valid @ModelAttribute OrderItemSearchReq req,
+                                                             @AuthenticationPrincipal CustomUserDetails userdetails) {
+        Pageable pageable = PageRequest.of(req.page(), req.size());
 
-    // TODO: 판매자 입장에서의 주문항목 조회도 필요함
+        return ResponseEntity
+                .ok(orderItemService.search(req, userdetails.getUserId(), userdetails.getUserRole(), pageable));
+    }
 
     @GetMapping("/{orderItemId}")
     public ResponseEntity<OrderItemDetailRes> getOrderItemDetail(@PathVariable Long orderItemId,

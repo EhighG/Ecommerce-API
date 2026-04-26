@@ -8,6 +8,14 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface ProductImageRepository extends JpaRepository<ProductImage, Long> {
+
+    @Query("""
+            select pi
+            from ProductImage pi
+            join fetch pi.uploadedImage ui
+            where pi.productId = :productId
+            order by pi.displayOrder asc
+            """)
     List<ProductImage> findAllByProductIdOrderByDisplayOrderAsc(Long productId);
 
     @Query("""
@@ -18,10 +26,24 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
             """)
     List<Long> findUploadedImageIdsByProductId(Long productId);
 
+    @Query("""
+            select pi.uploadedImage.id
+            from ProductImage pi
+            where pi.productId in :productIds
+            """)
+    List<Long> findUploadedImageIdsByProductIdIn(List<Long> productIds);
+
     @Modifying
     @Query("""
             delete from ProductImage pi
             where pi.productId = :productId
             """)
     void deleteAllByProductId(Long productId);
+
+    @Modifying
+    @Query("""
+            delete from ProductImage pi
+            where pi.productId in :productIds
+            """)
+    void deleteAllByProductIdIn(List<Long> productIds);
 }

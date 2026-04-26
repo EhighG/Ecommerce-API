@@ -10,12 +10,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-        name = "uploaded_image",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_uploaded_image_object_key", columnNames = "object_key")
-        }
-)
 public class UploadedImage extends BaseTimeEntity {
 
     @Id

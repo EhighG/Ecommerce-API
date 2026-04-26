@@ -3,10 +3,7 @@ package com.ecommerce.api.media.service;
 import com.ecommerce.api.common.config.StorageProperties;
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.common.exception.ErrorCode;
-import com.ecommerce.api.media.dto.CompleteUploadReq;
-import com.ecommerce.api.media.dto.CompleteUploadRes;
-import com.ecommerce.api.media.dto.CreateUploadUrlReq;
-import com.ecommerce.api.media.dto.CreateUploadUrlRes;
+import com.ecommerce.api.media.dto.*;
 import com.ecommerce.api.media.entity.UploadedImage;
 import com.ecommerce.api.media.repository.UploadedImageRepository;
 import com.ecommerce.api.media.storage.ObjectStorageClient;
@@ -70,6 +67,18 @@ public class MediaService {
         );
 
         return CompleteUploadRes.of(saved, resolveUrl(saved.getObjectKey()));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UploadedImageListRes> getUploadedImageInfoList() {
+        return uploadedImageRepository.findAllByOrderByIdAsc().stream()
+                .map(UploadedImageListRes::new)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UploadedImage> getUploadedImages(List<Long> imageIds) {
+        return uploadedImageRepository.findAllById(imageIds);
     }
 
     @Transactional(readOnly = true)

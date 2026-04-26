@@ -23,9 +23,10 @@ public class GcsConfig {
     }
 
     @Bean
-    public Storage gcsStorage() {
+    public Storage gcsStorage() throws IOException {
         return StorageOptions.newBuilder()
                 .setProjectId(properties.gcs().projectId())
+                .setCredentials(googleCredentials())
                 .build()
                 .getService();
     }

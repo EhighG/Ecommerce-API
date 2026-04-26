@@ -13,6 +13,30 @@ public interface ProductRepository extends JpaRepository<Product, Long>, Product
     List<Product> findAllBySellerIdAndDeletedFalse(Long sellerId);
     boolean existsByIdAndDeletedFalse(Long productId);
 
+    @Query("""
+            select p.id
+            from Product p
+            where p.seller.id = :sellerId
+            and p.deleted = false
+            """)
+    List<Long> findIdsBySellerIdAndDeletedFalse(Long sellerId);
+
+    @Modifying
+    @Query("""
+            update Product p
+            set p.thumbnailImage = null
+            where p.id in :productIds
+            """)
+    void clearThumbnailImageByIdIn(List<Long> productIds);
+
+    @Modifying
+    @Query("""
+            update Product p
+            set p.deleted = true
+            where p.id in :productIds
+            """)
+    void softDeleteAllByIdIn(List<Long> productIds);
+
     @Modifying
     @Query("""
             update Product p

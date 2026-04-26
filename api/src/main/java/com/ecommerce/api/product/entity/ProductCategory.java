@@ -8,12 +8,24 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
+@Table(
+        name = "product_category",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_product_category_name", columnNames = "name"
+                )
+        }
+)
 public class ProductCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private String name;
+
+    public ProductCategory(String name) {
+        this.name = name;
+    }
 }

@@ -67,12 +67,11 @@ public class OrderService {
     }
 
     public List<OrderListRes> findByBuyerId(Long buyerId) {
-        return orderRepository.findByBuyerIdOrderByOrderedAtDesc(buyerId).stream()
+        return orderRepository.findOrderListByBuyerId(buyerId).stream()
                 .map(OrderListRes::new)
                 .toList();
     }
 
-    // result not null
     public Order getOrder(Long orderId) {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ORDER_NOT_FOUND));

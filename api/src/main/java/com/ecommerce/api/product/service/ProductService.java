@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
@@ -134,38 +136,48 @@ public class ProductService {
     }
 
     private void attachImagesToProduct(List<ImageIdWithOrder> imageInfoList, Product product, Long sellerId) {
+        if (imageInfoList.isEmpty()) return;
+
+        List<Long> imageIds = imageInfoList.stream()
+                .map(ImageIdWithOrder::imageId)
+                .toList();
+
+        List<UploadedImage> uploadedImages = mediaService.getUploadedImages(imageIds);
+        if (uploadedImages.size() != imageIds.size()) {
+            throw new AppException(UPLOADED_IMAGE_NOT_FOUND);
+        }
+
+        Map<Long, UploadedImage> uploadedImageMap = uploadedImages.stream()
+                .collect(Collectors.toMap(UploadedImage::getId, ui -> ui));
+
         for (ImageIdWithOrder imageInfo : imageInfoList) {
-            UploadedImage uploadedImage = mediaService.getUploadedImage(imageInfo.imageId());
+            UploadedImage uploadedImage = uploadedImageMap.get(imageInfo.imageId());
 
             if (!uploadedImage.getUploadUserId().equals(sellerId))
                 throw new AppException(IMAGE_OWNER_MISMATCH);
             if (uploadedImage.isAttached())
                 throw new AppException(IMAGE_ALREADY_ATTACHED);
-
-            ProductImage productImage = productImageRepository.save(
-                    new ProductImage(product.getId(), imageInfo.order(), uploadedImage)
-            );
-            if (imageInfo.order() == 1)
-                product.setThumbnailImage(productImage);
         }
+
+        List<ProductImage> productImages = imageInfoList.stream()
+                .map(info -> new ProductImage(
+                        product.getId(),
+                        info.order(),
+                        uploadedImageMap.get(info.imageId())
+                ))
+                .toList();
+
+        productImageRepository.saveAll(productImages);
+
+        productImages.stream()
+                .filter(pi -> pi.getDisplayOrder() == 1)
+                .findFirst()
+                .ifPresent(product::setThumbnailImage);
     }
 
     public void checkSellerMatched(Product product, Long sellerId) {
         if (!product.getSeller().getId().equals(sellerId))
             throw new AppException(SELLER_NOT_MATCHED);
-    }
-
-    private void removeProductImages(Product product, Long userId) {
-        checkSellerMatched(product, userId);
-
-        List<Long> uploadedImageIdList = productImageRepository.findUploadedImageIdsByProductId(product.getId());
-
-        product.setThumbnailImage(null);
-
-        if (!uploadedImageIdList.isEmpty()) {
-            productImageRepository.deleteAllByProductId(product.getId());
-            mediaService.detachAllById(uploadedImageIdList);
-        }
     }
 
     private void validateProductImageInputs(List<ImageIdWithOrder> imageIdList) {
@@ -176,5 +188,36 @@ public class ProductService {
     private User getUserNotDeleted(Long userId) {
         return userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(USER_NOT_FOUND));
+    }
+
+    /*
+    카테고리
+     */
+
+    @Transactional
+    public Long addCategory(AddCategoryReq req) {
+        if (productCategoryRepository.existsByName(req.name())) {
+            throw new AppException(PRODUCT_CATEGORY_ALREADY_EXISTS);
+        }
+
+        ProductCategory saved = productCategoryRepository.save(
+                new ProductCategory(req.name())
+        );
+
+        return saved.getId();
+    }
+
+    public List<CategorySummary> getCategories() {
+        return productCategoryRepository.findAllByOrderByIdAsc().stream()
+                .map(CategorySummary::new)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteCategory(Long categoryId) {
+        ProductCategory category = productCategoryRepository.findById(categoryId)
+                .orElseThrow(() -> new AppException(PRODUCT_CATEGORY_NOT_FOUND));
+
+        productCategoryRepository.delete(category);
     }
 }

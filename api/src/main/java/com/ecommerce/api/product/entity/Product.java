@@ -28,7 +28,6 @@ public class Product extends BaseTimeEntity {
     @JoinColumn(name = "product_category_id", nullable = false)
     private ProductCategory category;
 
-    @Lob
     @Size(min = 1, max = 1000)
     @Column(nullable = false)
     private String description;

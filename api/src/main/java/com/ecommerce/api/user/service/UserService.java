@@ -64,6 +64,14 @@ public class UserService {
         return new UserProfileRes(user, totalReviewCount, recentReviewList);
     }
 
+    public List<UserInfoListRes> getUserInfoList(UserRole currentUserRole) {
+        if (!UserRole.ADMIN.equals(currentUserRole))
+            throw new AppException(NO_PERMISSIONS);
+        return userRepository.findAllByOrderByIdAsc().stream()
+                .map(UserInfoListRes::new)
+                .toList();
+    }
+
     private UserReviewListRes toUserReviewList(Review review) {
         String thumbnailUrl = productImageUrlResolver
                 .resolveThumbnail(review.getProduct());
