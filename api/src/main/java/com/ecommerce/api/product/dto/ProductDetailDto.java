@@ -10,10 +10,7 @@ public record ProductDetailDto(
         Long sellerId,
         String sellerNickname,
         int inventoryQuantity,
-        double avgHalfStars
+        double avgRating
 
 ) {
-    public double avgRating() {
-        return avgHalfStars / 2.0;
-    }
 }

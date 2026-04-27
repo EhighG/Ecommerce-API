@@ -8,9 +8,11 @@ import com.ecommerce.api.product.dto.*;
 import com.ecommerce.api.product.entity.Product;
 import com.ecommerce.api.product.entity.ProductCategory;
 import com.ecommerce.api.product.entity.ProductImage;
+import com.ecommerce.api.product.entity.ProductStat;
 import com.ecommerce.api.product.repository.ProductCategoryRepository;
 import com.ecommerce.api.product.repository.ProductImageRepository;
 import com.ecommerce.api.product.repository.ProductRepository;
+import com.ecommerce.api.product.repository.ProductStatRepository;
 import com.ecommerce.api.user.entity.User;
 import com.ecommerce.api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final ProductStatRepository productStatRepository;
     private final UserRepository userRepository;
     private final MediaService mediaService;
     private final ProductDeletionService productDeletionService;
@@ -56,6 +59,8 @@ public class ProductService {
                         seller
                 )
         );
+
+        productStatRepository.save(new ProductStat(product));
 
         inventoryService.createInventory(product, req.initialInventory());
 
