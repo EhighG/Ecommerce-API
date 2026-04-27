@@ -24,6 +24,7 @@ public enum ErrorCode {
     INVALID_SORT_TYPE(BAD_REQUEST, 2003, "정렬 기준값이 잘못되었습니다."),
     DELETED_PRODUCT(BAD_REQUEST, 2004, "삭제된 상품입니다."),
     PRODUCT_CATEGORY_ALREADY_EXISTS(CONFLICT, 2005, "Product category already exists"),
+    PRODUCT_STAT_NOT_FOUND(INTERNAL_SERVER_ERROR, 2006, "잠시 후 다시 시도해주세요."),
 
     NO_INVENTORY_FOR_PRODUCT(INTERNAL_SERVER_ERROR, 2500, "해당 상품의 재고정보가 없습니다. (관리자 문의 필요)"),
     INSUFFICIENT_INVENTORY(BAD_REQUEST, 2501, "재고가 부족합니다."),

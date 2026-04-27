@@ -7,6 +7,7 @@ import com.ecommerce.api.order.entity.OrderItem;
 import com.ecommerce.api.order.enums.OrderStatus;
 import com.ecommerce.api.order.repository.OrderItemRepository;
 import com.ecommerce.api.order.repository.OrderRepository;
+import com.ecommerce.api.product.repository.ProductStatRepository;
 import com.ecommerce.api.product.support.ProductImageUrlResolver;
 import com.ecommerce.api.user.enums.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,9 @@ import static com.ecommerce.api.common.exception.ErrorCode.*;
 public class OrderItemService {
 
     private final OrderItemRepository orderItemRepository;
-    private final ProductImageUrlResolver productImageUrlResolver;
     private final OrderRepository orderRepository;
+    private final ProductStatRepository productStatRepository;
+    private final ProductImageUrlResolver productImageUrlResolver;
     private final InventoryService inventoryService;
 
     public OrderItemSearchRes search(OrderItemSearchReq req, Long userId, UserRole role, Pageable pageable) {
@@ -150,6 +152,11 @@ public class OrderItemService {
             throw new AppException(ORDER_ACCESS_DENIED);
 
         orderItem.cancel();
+        int updatedCount = productStatRepository.increaseOrderItemCount(orderItem.getProduct().getId(), -1L);
+        if (updatedCount != 1) {
+            throw new AppException(PRODUCT_STAT_NOT_FOUND);
+        }
+
         inventoryService.restore(orderItem.getProduct().getId(), orderItem.getQuantity());
     }
 

@@ -27,7 +27,7 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
                     ps.id,
                     ps.nickname,
                     i.quantity,
-                    coalesce(avg(r.rating.halfStars), 0.0)
+                    pst.ratingAvg
                 )
             )
             from CartItem ci
@@ -35,21 +35,11 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
             join p.category pc
             join p.seller ps
             join Inventory i on i.product = p
+            join ProductStat pst on pst.product = p
             left join p.thumbnailImage ti
             left join ti.uploadedImage ui
-            left join Review r on r.product = p
             where ci.user.id = :userId
             and p.deleted = false
-            group by
-                ci,
-                p.id,
-                p.name,
-                pc.name,
-                ui.objectKey,
-                p.unitPrice,
-                ps.id,
-                ps.nickname,
-                i.quantity
             order by ci.id desc
             """)
     List<CartItemProductDto> findAllByUserIdWithProduct(Long userId);

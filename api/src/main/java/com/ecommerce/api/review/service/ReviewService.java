@@ -3,6 +3,7 @@ package com.ecommerce.api.review.service;
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.order.service.OrderItemService;
 import com.ecommerce.api.product.entity.Product;
+import com.ecommerce.api.product.repository.ProductStatRepository;
 import com.ecommerce.api.product.service.ProductService;
 import com.ecommerce.api.product.support.ProductImageUrlResolver;
 import com.ecommerce.api.review.dto.*;
@@ -27,9 +28,10 @@ import static com.ecommerce.api.common.exception.ErrorCode.*;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
+    private final UserRepository userRepository;
+    private final ProductStatRepository productStatRepository;
     private final ProductService productService;
     private final OrderItemService orderItemService;
-    private final UserRepository userRepository;
     private final ProductImageUrlResolver productImageUrlResolver;
 
     @Transactional
@@ -42,6 +44,11 @@ public class ReviewService {
         Review saved = reviewRepository.save(
                 new Review(user, product, req.halfStars(), req.content())
         );
+
+        int updatedCount = productStatRepository.addReview(product.getId(), req.halfStars());
+        if (updatedCount != 1) {
+            throw new AppException(PRODUCT_STAT_NOT_FOUND);
+        }
 
         return saved.getId();
     }
@@ -118,7 +125,18 @@ public class ReviewService {
             throw new AppException(DELETED_PRODUCT);
         }
 
+        int oldHalfStars = review.getRating().getHalfStars();
+
         review.modify(req.halfStars(), req.content());
+
+        int deltaHalfStars = req.halfStars() - oldHalfStars;
+
+        if (deltaHalfStars == 0) return;
+
+        int updatedCount = productStatRepository.changeReviewRating(review.getProduct().getId(), deltaHalfStars);
+        if (updatedCount != 1) {
+            throw new AppException(PRODUCT_STAT_NOT_FOUND);
+        }
     }
 
     private void checkWriterMatched(Review review, Long userId) {

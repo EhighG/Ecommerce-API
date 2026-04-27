@@ -12,6 +12,7 @@ import com.ecommerce.api.order.entity.Order;
 import com.ecommerce.api.order.repository.OrderRepository;
 import com.ecommerce.api.order.vo.OrderLine;
 import com.ecommerce.api.order.vo.ProductSnapshot;
+import com.ecommerce.api.product.repository.ProductStatRepository;
 import com.ecommerce.api.product.support.ProductImageUrlResolver;
 import com.ecommerce.api.user.entity.User;
 import com.ecommerce.api.user.service.UserService;
@@ -29,9 +30,10 @@ import static com.ecommerce.api.common.exception.ErrorCode.*;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final CartItemRepository cartItemRepository;
+    private final ProductStatRepository productStatRepository;
     private final UserService userService;
     private final ProductImageUrlResolver productImageUrlResolver;
-    private final CartItemRepository cartItemRepository;
     private final InventoryService inventoryService;
 
     @Transactional
@@ -53,6 +55,16 @@ public class OrderService {
                 }).toList();
 
         Order saved = orderRepository.save(new Order(orderLines, buyer));
+
+        List<Long> productIds = orderLines.stream()
+                .map(orderLine -> orderLine.product().getId())
+                .toList();
+
+        int updatedCount = productStatRepository.increaseOrderItemCountIn(productIds, 1L);
+        if (updatedCount != productIds.size()) {
+            throw new AppException(PRODUCT_STAT_NOT_FOUND);
+        }
+
         cartItemRepository.deleteAllByUserIdAndIdIn(userId, req.cartItemIdList());
 
         return saved.getId();
