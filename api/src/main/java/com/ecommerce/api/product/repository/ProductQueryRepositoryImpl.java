@@ -14,6 +14,8 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +25,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Repository
@@ -116,10 +120,11 @@ public class ProductQueryRepositoryImpl implements ProductQueryRepository {
         where.and(product.deleted.isFalse());
 
         if(StringUtils.hasText(condition.keyword())) {
-            where.and(
-                    product.name.containsIgnoreCase(condition.keyword())
-                            .or(product.description.containsIgnoreCase(condition.keyword()))
-            );
+//            where.and(
+//                    product.name.containsIgnoreCase(condition.keyword())
+//                            .or(product.description.containsIgnoreCase(condition.keyword()))
+//            );
+            where.and(fullTextSearch(condition.keyword()));
         }
 
         if (condition.categoryId() != null)
@@ -128,6 +133,35 @@ public class ProductQueryRepositoryImpl implements ProductQueryRepository {
             where.and(product.seller.id.eq(condition.sellerId()));
 
         return where;
+    }
+
+    private BooleanExpression fullTextSearch(String keyword) {
+        String fullTextKeyword = toBooleanFullTextKeyword(keyword);
+
+        if (!StringUtils.hasText(fullTextKeyword)) {
+            return Expressions.FALSE;
+        }
+
+        return Expressions.numberTemplate(
+                Double.class,
+                "sql('match(?, ?) against (? in boolean mode)', {0}, {1}, {2})",
+                product.name,
+                product.description,
+                fullTextKeyword
+        ).gt(0.0);
+    }
+
+    /**
+     * 공백 포함된 검색어는 토큰이 전부 포함된것만 검색되도록 변환함
+     * ex) "파란 반팔" -> "파란", "반팔" 모두 포함
+     */
+    private String toBooleanFullTextKeyword(String keyword) {
+        String sanitized = keyword.replaceAll("[+\\-<>()~*\"@]+", " ");
+
+        return Arrays.stream(sanitized.trim().split("\\s+"))
+                .filter(StringUtils::hasText)
+                .map(token -> "+" + token)
+                .collect(Collectors.joining(" "));
     }
 
     private OrderSpecifier<?> primaryOrder(SearchReq condition) {
