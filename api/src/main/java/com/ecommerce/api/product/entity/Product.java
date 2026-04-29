@@ -15,6 +15,22 @@ import org.hibernate.annotations.SQLDelete;
 @Entity
 //@SQLRestriction("deleted = false") // Review쪽에서 삭제된 상품 표시하기 위함
 @SQLDelete(sql = "update product set deleted = true where id = ?")
+@Table(
+        indexes = {
+                @Index(
+                        name = "idx_product_deleted_created_id",
+                        columnList = "deleted, created_at DESC, id DESC"
+                ),
+                @Index(
+                        name = "idx_product_category_deleted_created_id",
+                        columnList = "product_category_id, deleted, created_at DESC, id DESC"
+                ),
+                @Index(
+                        name = "idx_product_category_deleted_view_count_id",
+                        columnList = "product_category_id, deleted, view_count DESC, id DESC"
+                )
+        }
+)
 public class Product extends BaseTimeEntity {
 
     @Id
