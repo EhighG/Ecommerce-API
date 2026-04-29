@@ -120,10 +120,6 @@ public class ProductQueryRepositoryImpl implements ProductQueryRepository {
         where.and(product.deleted.isFalse());
 
         if(StringUtils.hasText(condition.keyword())) {
-//            where.and(
-//                    product.name.containsIgnoreCase(condition.keyword())
-//                            .or(product.description.containsIgnoreCase(condition.keyword()))
-//            );
             where.and(fullTextSearch(condition.keyword()));
         }
 
