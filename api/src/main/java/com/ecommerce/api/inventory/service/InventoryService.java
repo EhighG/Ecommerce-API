@@ -1,10 +1,10 @@
 package com.ecommerce.api.inventory.service;
 
-import com.ecommerce.api.cartitem.entity.CartItem;
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.inventory.dto.ModifyInventoryReq;
 import com.ecommerce.api.inventory.entity.Inventory;
 import com.ecommerce.api.inventory.repository.InventoryRepository;
+import com.ecommerce.api.order.vo.OrderLine;
 import com.ecommerce.api.product.entity.Product;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -44,9 +44,9 @@ public class InventoryService {
 //    }
 
     @Transactional
-    public void validateAndDeduct(List<CartItem> cartItems) {
-        List<Long> productIds = cartItems.stream()
-                .map(cartItem -> cartItem.getProduct().getId())
+    public void validateAndDeduct(List<OrderLine> orderLines) {
+        List<Long> productIds = orderLines.stream()
+                .map(orderLine -> orderLine.product().getId())
                 .distinct()
                 .toList();
 
@@ -56,16 +56,16 @@ public class InventoryService {
                     inventoryMap.put(inventory.getProduct().getId(), inventory);
                 });
 
-        for (CartItem cartItem : cartItems) {
-            Inventory inventory = inventoryMap.get(cartItem.getProduct().getId());
+        for (OrderLine orderLine : orderLines) {
+            Inventory inventory = inventoryMap.get(orderLine.product().getId());
             if (inventory == null) {
                 throw new AppException(NO_INVENTORY_FOR_PRODUCT);
             }
-            if (inventory.getQuantity() < cartItem.getQuantity()) {
+            if (inventory.getQuantity() < orderLine.quantity()) {
                 throw new AppException(INSUFFICIENT_INVENTORY);
             }
 
-            inventory.adjust(cartItem.getQuantity() * -1);
+            inventory.adjust(orderLine.quantity() * -1);
         }
     }
 

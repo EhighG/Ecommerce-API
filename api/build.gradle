@@ -54,25 +54,6 @@ dependencies {
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 }
 
-sourceSets {
-    main {
-        java {
-            exclude 'com/ecommerce/api/chat/**'
-            exclude 'com/ecommerce/api/chatroom/**'
-            exclude 'com/ecommerce/api/payment/**'
-            exclude 'com/ecommerce/api/common/websocket/**'
-        }
-    }
-    test {
-        java {
-            exclude 'com/ecommerce/api/chat/**'
-            exclude 'com/ecommerce/api/chatroom/**'
-            exclude 'com/ecommerce/api/payment/**'
-            exclude 'com/ecommerce/api/common/websocket/**'
-        }
-    }
-}
-
 tasks.named('test') {
     useJUnitPlatform()
 }

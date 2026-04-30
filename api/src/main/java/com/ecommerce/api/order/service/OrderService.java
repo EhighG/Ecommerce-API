@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
@@ -40,19 +42,36 @@ public class OrderService {
     public Long order(OrderReq req, Long userId) {
         User buyer = userService.getUserNotDeleted(userId);
 
-        List<CartItem> cartItemList = cartItemRepository.findAllByUserIdAndIdInWithProduct(userId, req.cartItemIdList());
-        if (cartItemList.size() != req.cartItemIdList().size()) {
+        List<Long> cartItemIds = req.items().stream()
+                .map(OrderReq.OrderItemReq::cartItemId)
+                .toList();
+
+        if (cartItemIds.stream().distinct().count() != cartItemIds.size()) {
+            throw new AppException(INVALID_INPUT, "중복된 장바구니 항목이 있습니다.");
+        }
+
+        List<CartItem> cartItemList = cartItemRepository.findAllByUserIdAndIdInWithProduct(userId, cartItemIds);
+        if (cartItemList.size() != cartItemIds.size()) {
             throw new AppException(CART_ITEM_NOT_FOUND);
         }
 
         checkProductNotDeleted(cartItemList);
-        inventoryService.validateAndDeduct(cartItemList);
+
+        Map<Long, Integer> orderQuantityByCartItemId = req.items().stream()
+                        .collect(Collectors.toMap(
+                                OrderReq.OrderItemReq::cartItemId,
+                                OrderReq.OrderItemReq::orderQuantity
+                        ));
 
         List<OrderLine> orderLines = cartItemList.stream()
                 .map(cartItem -> {
+                    int quantity = orderQuantityByCartItemId.get(cartItem.getId());
                     ProductSnapshot productSnapshot = ProductSnapshot.from(cartItem.getProduct());
-                    return new OrderLine(productSnapshot, cartItem.getQuantity());
+
+                    return new OrderLine(productSnapshot, quantity);
                 }).toList();
+
+        inventoryService.validateAndDeduct(orderLines);
 
         Order saved = orderRepository.save(new Order(orderLines, buyer));
 
@@ -65,7 +84,15 @@ public class OrderService {
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
         }
 
-        cartItemRepository.deleteAllByUserIdAndIdIn(userId, req.cartItemIdList());
+        for (CartItem cartItem : cartItemList) {
+            int orderQuantity = orderQuantityByCartItemId.get(cartItem.getId());
+
+            if (orderQuantity >= cartItem.getQuantity()) {
+                cartItemRepository.delete(cartItem);
+            } else {
+                cartItem.adjustQuantity(-1 * orderQuantity);
+            }
+        }
 
         return saved.getId();
     }
