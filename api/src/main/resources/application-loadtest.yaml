@@ -1,0 +1,50 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${RDB_HOST}:${RDB_PORT}/${RDB_NAME}
+    username: ${RDB_USERNAME}
+    password: ${RDB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    name: loadtest
+
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:10}
+      minimum-idle: ${HIKARI_MIN_IDLE:10}
+      connection-timeout: ${HIKARI_CONN_TIMEOUT_MS:30000}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        generate_statistics: false
+        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: ${HIBERNATE_SLOW_QUERY_MS:1000}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      timeout: 3s
+
+app:
+  storage:
+    gcs:
+      project-id: ${GCP_PROJECT_ID}
+      bucket: ${GCS_BUCKET}
+      upload-prefix: ${GCS_UPLOAD_PREFIX}
+      public-base-url: https://storage.googleapis.com/${GCS_BUCKET}
+
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+logging:
+  level:
+    root: info
+    org.hibernate.SQL: warn
+    org.hibernate.orm.jdbc.bind: warn
+    org.hibernate.stat: warn
+    org.springframework.transaction: warn
