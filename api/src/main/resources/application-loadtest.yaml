@@ -27,6 +27,11 @@ spring:
       password: ${REDIS_PASSWORD}
       timeout: 3s
 
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
 app:
   storage:
     gcs:
