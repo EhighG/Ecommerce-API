@@ -52,6 +52,10 @@ public enum ErrorCode {
     // 7xxx: CartItem
     CART_ITEM_NOT_FOUND(NOT_FOUND, 7000, "CartItem not found"),
 
+    // 75xx: Coupon
+    COUPON_EXPIRED(BAD_REQUEST, 7501, "쿠폰 사용기간이 만료되었습니다"),
+    INVALID_COUPON_STATUS(BAD_REQUEST, 7502, "Invalid coupon status"),
+
     // 8xxx: Media
     MEDIA_OBJECT_NOT_FOUND(NOT_FOUND, 8000, "Media object not found"),
     INVALID_MEDIA_CONTENT_TYPE(BAD_REQUEST, 8001, "Invalid media content type"),
