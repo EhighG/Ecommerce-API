@@ -50,8 +50,12 @@ public class SecurityConfig {
         return new RequestMatcher[] {
                 matcher(POST, "/products/category"),
                 matcher(DELETE, "/products/category/{categoryId}"),
+
                 matcher(GET, "/media/uploaded-images"),
+
                 matcher(GET, "/users"),
+
+                matcher(POST, "/coupons/events"),
         };
     }
 
@@ -83,6 +87,9 @@ public class SecurityConfig {
 
                 matcher(POST, "/products/{productId}/reviews"),
                 matcher(PATCH, "/reviews/{reviewId}"),
+
+                matcher(GET, "/coupons/events/{couponEventId}"),
+                matcher(POST, "/coupons/events/{couponEventId}/issue"),
         };
     }
 

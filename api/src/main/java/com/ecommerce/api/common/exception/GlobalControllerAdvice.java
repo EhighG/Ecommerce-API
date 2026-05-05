@@ -25,7 +25,7 @@ public class GlobalControllerAdvice {
         ErrorCode errorCode = e.getErrorCode();
         return ResponseEntity
                 .status(errorCode.httpStatus())
-                .body(new ApiError(errorCode));
+                .body(new ApiError(errorCode.code(), e.getMessage()));
     }
 
     // Bean Validation 실패, ModelAttribute 관련
