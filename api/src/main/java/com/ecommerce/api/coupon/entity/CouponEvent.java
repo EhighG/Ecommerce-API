@@ -122,4 +122,8 @@ public class CouponEvent extends BaseTimeEntity {
                 amount
         );
     }
+
+    public boolean isOpen(Instant now) {
+        return active && !now.isBefore(startAt) && now.isBefore(endAt);
+    }
 }

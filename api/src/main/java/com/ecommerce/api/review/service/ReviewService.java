@@ -1,7 +1,8 @@
 package com.ecommerce.api.review.service;
 
 import com.ecommerce.api.common.exception.AppException;
-import com.ecommerce.api.order.service.OrderItemService;
+import com.ecommerce.api.order.enums.OrderStatus;
+import com.ecommerce.api.order.repository.OrderItemRepository;
 import com.ecommerce.api.product.entity.Product;
 import com.ecommerce.api.product.repository.ProductStatRepository;
 import com.ecommerce.api.product.service.ProductService;
@@ -30,8 +31,8 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final ProductStatRepository productStatRepository;
+    private final OrderItemRepository orderItemRepository;
     private final ProductService productService;
-    private final OrderItemService orderItemService;
     private final ProductImageUrlResolver productImageUrlResolver;
 
     @Transactional
@@ -58,7 +59,8 @@ public class ReviewService {
         Product product = productService.getProduct(productId);
 
         // 2. 해당 product에 대한 유저의 구매확정 주문건이 있는지 검사
-        boolean confirmedOrderExists = orderItemService.confirmedOrderItemExists(userId, productId);
+        boolean confirmedOrderExists = orderItemRepository
+                .existsByOrderBuyerIdAndProductIdAndStatus(userId, productId, OrderStatus.PURCHASE_CONFIRMED);
         if (!confirmedOrderExists) {
             throw new AppException(NO_CONFIRMED_ORDER_EXISTS);
         }

@@ -16,6 +16,12 @@ import java.time.Instant;
 @Embeddable
 public class UsedCouponSnapshot {
 
+    @Column(name = "coupon_issued_id", nullable = false)
+    private Long couponIssuedId;
+
+    @Column(name = "coupon_event_id", nullable = false)
+    private Long couponEventId;
+
     @Column(name = "coupon_name", nullable = false, length = 100)
     private String name;
 
@@ -35,7 +41,11 @@ public class UsedCouponSnapshot {
     @Column(nullable = false)
     private Instant usedAt;
 
-    public UsedCouponSnapshot(CouponEvent couponEvent, long discountedAmount, Instant usedAt) {
+    public UsedCouponSnapshot(CouponIssued couponIssued, long discountedAmount, Instant usedAt) {
+        CouponEvent couponEvent = couponIssued.getCouponEvent();
+
+        this.couponIssuedId = couponIssued.getId();
+        this.couponEventId = couponEvent.getId();
         this.name = couponEvent.getName();
         this.type = couponEvent.getType();
         this.discountValue = couponEvent.getDiscountValue();

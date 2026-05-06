@@ -1,10 +1,12 @@
 package com.ecommerce.api.order.service;
 
 import com.ecommerce.api.common.exception.AppException;
+import com.ecommerce.api.coupon.entity.OrderItemCoupon;
+import com.ecommerce.api.coupon.service.CouponService;
+import com.ecommerce.api.coupon.service.OrderItemCouponService;
 import com.ecommerce.api.inventory.service.InventoryService;
 import com.ecommerce.api.order.dto.*;
 import com.ecommerce.api.order.entity.OrderItem;
-import com.ecommerce.api.order.enums.OrderStatus;
 import com.ecommerce.api.order.repository.OrderItemRepository;
 import com.ecommerce.api.order.repository.OrderRepository;
 import com.ecommerce.api.product.repository.ProductStatRepository;
@@ -16,7 +18,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
@@ -30,6 +34,8 @@ public class OrderItemService {
     private final ProductStatRepository productStatRepository;
     private final ProductImageUrlResolver productImageUrlResolver;
     private final InventoryService inventoryService;
+    private final CouponService couponService;
+    private final OrderItemCouponService orderItemCouponService;
 
     public OrderItemSearchRes search(OrderItemSearchReq req, Long userId, UserRole role, Pageable pageable) {
         if (req.ofBuyer()) {
@@ -51,11 +57,17 @@ public class OrderItemService {
         }
 
         Page<OrderItem> page = orderItemRepository.findAllByOrderAndBuyer(req.orderId(), userId, pageable);
+        Map<Long, OrderItemCoupon> orderItemCouponByOrderItemId =
+                orderItemCouponService.findByOrderItemId(page.getContent());
 
         List<BuyerOrderItemSearchRes.OrderItemSummary> content = page.getContent().stream()
                 .map(item -> {
                     String thumbnailUrl = productImageUrlResolver.resolveThumbnail(item.getProduct());
-                    return new BuyerOrderItemSearchRes.OrderItemSummary(item, thumbnailUrl);
+                    return new BuyerOrderItemSearchRes.OrderItemSummary(
+                            item,
+                            thumbnailUrl,
+                            orderItemCouponByOrderItemId.get(item.getId())
+                    );
                 })
                 .toList();
 
@@ -80,11 +92,17 @@ public class OrderItemService {
         } else {
             page = orderItemRepository.findAllBySeller(req.sellerId(), pageable);
         }
+        Map<Long, OrderItemCoupon> orderItemCouponByOrderItemId =
+                orderItemCouponService.findByOrderItemId(page.getContent());
 
         List<SellerOrderItemSearchRes.OrderItemSummary> content = page.getContent().stream()
                 .map(item -> {
                     String thumbnailUrl = productImageUrlResolver.resolveThumbnail(item.getProduct());
-                    return new SellerOrderItemSearchRes.OrderItemSummary(item, thumbnailUrl);
+                    return new SellerOrderItemSearchRes.OrderItemSummary(
+                            item,
+                            thumbnailUrl,
+                            orderItemCouponByOrderItemId.get(item.getId())
+                    );
                 })
                 .toList();
 
@@ -114,7 +132,13 @@ public class OrderItemService {
         if (!isBuyer && !isSeller)
             throw new AppException(ORDER_ACCESS_DENIED);
 
-        return new OrderItemDetailRes(orderItem, productImageUrlResolver.resolveThumbnail(orderItem.getProduct()));
+        OrderItemCoupon orderItemCoupon = orderItemCouponService.findByOrderItemId(orderItemId);
+
+        return new OrderItemDetailRes(
+                orderItem,
+                productImageUrlResolver.resolveThumbnail(orderItem.getProduct()),
+                orderItemCoupon
+        );
     }
 
     @Transactional
@@ -152,6 +176,14 @@ public class OrderItemService {
             throw new AppException(ORDER_ACCESS_DENIED);
 
         orderItem.cancel();
+
+        // 사용했던 쿠폰 있으면 복구
+        OrderItemCoupon usedCoupon = orderItemCouponService.findByOrderItemId(orderItemId);
+        if (usedCoupon != null) {
+            Long couponIssuedId = usedCoupon.getUsedCoupon().getCouponIssuedId();
+            couponService.restoreCouponIssued(couponIssuedId, Instant.now());
+        }
+
         int updatedCount = productStatRepository.increaseOrderItemCount(orderItem.getProduct().getId(), -1L);
         if (updatedCount != 1) {
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
@@ -166,10 +198,5 @@ public class OrderItemService {
 
     private boolean isBuyer(OrderItem orderItem, Long userId) {
         return orderItem.getOrder().getBuyer().getId().equals(userId);
-    }
-
-    public boolean confirmedOrderItemExists(Long buyerId, Long productId) {
-        return orderItemRepository
-                .existsByOrderBuyerIdAndProductIdAndStatus(buyerId, productId, OrderStatus.PURCHASE_CONFIRMED);
     }
 }

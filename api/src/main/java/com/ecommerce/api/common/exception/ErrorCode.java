@@ -53,8 +53,17 @@ public enum ErrorCode {
     CART_ITEM_NOT_FOUND(NOT_FOUND, 7000, "CartItem not found"),
 
     // 75xx: Coupon
+    COUPON_EVENT_NOT_FOUND(NOT_FOUND, 7500, "해당 이벤트가 존재하지 않습니다."),
     COUPON_EXPIRED(BAD_REQUEST, 7501, "쿠폰 사용기간이 만료되었습니다"),
     INVALID_COUPON_STATUS(BAD_REQUEST, 7502, "Invalid coupon status"),
+    COUPON_EVENT_CLOSED(BAD_REQUEST, 7503, "종료된 이벤트입니다."),
+    COUPON_EVENT_READ_FAILED(INTERNAL_SERVER_ERROR, 7504, "이벤트 정보 조회 실패"),
+    COUPON_ISSUE_FAILED(INTERNAL_SERVER_ERROR, 7505, "쿠폰 발행 실패"),
+    COUPON_ALREADY_ISSUED(BAD_REQUEST, 7506, "해당 쿠폰은 1회만 발급 가능합니다."),
+    COUPON_SOLD_OUT(BAD_REQUEST, 7507, "쿠폰이 모두 소진되었습니다."),
+    COUPON_EVENT_CACHING_FAILED(INTERNAL_SERVER_ERROR, 7508, "쿠폰 이벤트 캐시처리 실패"),
+    DUPLICATED_COUPON(BAD_REQUEST, 7509, "같은 쿠폰은 중복 사용 불가능합니다."),
+    COUPON_ISSUED_NOT_FOUND(BAD_REQUEST, 7510, "해당 쿠폰을 찾을 수 없습니다."),
 
     // 8xxx: Media
     MEDIA_OBJECT_NOT_FOUND(NOT_FOUND, 8000, "Media object not found"),

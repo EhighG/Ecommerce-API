@@ -3,12 +3,17 @@ package com.ecommerce.api.order.service;
 import com.ecommerce.api.cartitem.entity.CartItem;
 import com.ecommerce.api.cartitem.repository.CartItemRepository;
 import com.ecommerce.api.common.exception.AppException;
+import com.ecommerce.api.coupon.entity.CouponIssued;
+import com.ecommerce.api.coupon.entity.OrderItemCoupon;
+import com.ecommerce.api.coupon.service.CouponService;
+import com.ecommerce.api.coupon.service.OrderItemCouponService;
 import com.ecommerce.api.inventory.service.InventoryService;
 import com.ecommerce.api.order.dto.OrderDetailRes;
 import com.ecommerce.api.order.dto.OrderItemListRes;
 import com.ecommerce.api.order.dto.OrderListRes;
 import com.ecommerce.api.order.dto.OrderReq;
 import com.ecommerce.api.order.entity.Order;
+import com.ecommerce.api.order.entity.OrderItem;
 import com.ecommerce.api.order.repository.OrderRepository;
 import com.ecommerce.api.order.vo.OrderLine;
 import com.ecommerce.api.order.vo.ProductSnapshot;
@@ -20,8 +25,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
@@ -37,6 +44,8 @@ public class OrderService {
     private final UserService userService;
     private final ProductImageUrlResolver productImageUrlResolver;
     private final InventoryService inventoryService;
+    private final CouponService couponService;
+    private final OrderItemCouponService orderItemCouponService;
 
     @Transactional
     public Long order(OrderReq req, Long userId) {
@@ -57,18 +66,46 @@ public class OrderService {
 
         checkProductNotDeleted(cartItemList);
 
+        // 쿠폰 로직 추가
+        Map<Long, Long> couponIssuedIdByCartItemId = req.items().stream()
+                .filter(item -> item.couponIssuedId() != null)
+                .collect(Collectors.toMap(
+                        OrderReq.OrderItemReq::cartItemId,
+                        OrderReq.OrderItemReq::couponIssuedId
+                ));
+
+        List<Long> couponIssuedIds = couponIssuedIdByCartItemId.values().stream().toList();
+        List<CouponIssued> coupons = couponService.findCoupons(couponIssuedIds, userId);
+
+        Map<Long, CouponIssued> couponById = coupons.stream()
+                .collect(Collectors.toMap(CouponIssued::getId, Function.identity()));
+
         Map<Long, Integer> orderQuantityByCartItemId = req.items().stream()
                         .collect(Collectors.toMap(
                                 OrderReq.OrderItemReq::cartItemId,
                                 OrderReq.OrderItemReq::orderQuantity
                         ));
 
+        Instant now = Instant.now();
+
         List<OrderLine> orderLines = cartItemList.stream()
                 .map(cartItem -> {
                     int quantity = orderQuantityByCartItemId.get(cartItem.getId());
                     ProductSnapshot productSnapshot = ProductSnapshot.from(cartItem.getProduct());
 
-                    return new OrderLine(productSnapshot, quantity);
+                    Long couponIssuedId = couponIssuedIdByCartItemId.get(cartItem.getId());
+                    long discountAmount = 0L;
+
+                    if (couponIssuedId != null) {
+                        CouponIssued coupon = couponById.get(couponIssuedId);
+
+                        long linePrice = productSnapshot.getUnitPrice() * quantity;
+                        discountAmount = coupon.getCouponEvent().calculateDiscountAmount(linePrice);
+
+                        coupon.use(now);
+                    }
+
+                    return new OrderLine(productSnapshot, quantity, couponIssuedId, discountAmount);
                 }).toList();
 
         inventoryService.validateAndDeduct(orderLines);
@@ -82,6 +119,20 @@ public class OrderService {
         int updatedCount = productStatRepository.increaseOrderItemCountIn(productIds, 1L);
         if (updatedCount != productIds.size()) {
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
+        }
+
+        // 쿠폰 로직 추가
+        for (int i = 0; i < orderLines.size(); i++) {
+            OrderLine orderLine = orderLines.get(i);
+
+            if (!orderLine.hasCoupon()) {
+                continue;
+            }
+
+            OrderItem orderItem = saved.getItemList().get(i);
+            CouponIssued couponIssued = couponById.get(orderLine.couponIssuedId());
+
+            orderItemCouponService.create(orderItem, couponIssued, orderLine.discountAmount());
         }
 
         for (CartItem cartItem : cartItemList) {
@@ -122,11 +173,14 @@ public class OrderService {
         if (!order.getBuyer().getId().equals(userId))
             throw new AppException(ORDER_ACCESS_DENIED);
 
+        Map<Long, OrderItemCoupon> orderItemCouponByOrderItemId =
+                orderItemCouponService.findByOrderItemId(order.getItemList());
+
         List<OrderItemListRes> itemList = order.getItemList().stream()
                 .map(item -> {
                     String thumbnail = productImageUrlResolver.resolveThumbnail(item.getProduct());
 
-                    return new OrderItemListRes(item, thumbnail);
+                    return new OrderItemListRes(item, thumbnail, orderItemCouponByOrderItemId.get(item.getId()));
                 })
                 .toList();
 

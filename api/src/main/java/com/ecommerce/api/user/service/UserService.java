@@ -4,9 +4,6 @@ import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.order.enums.OrderStatus;
 import com.ecommerce.api.order.repository.OrderItemRepository;
 import com.ecommerce.api.product.service.ProductDeletionService;
-import com.ecommerce.api.product.support.ProductImageUrlResolver;
-import com.ecommerce.api.review.entity.Review;
-import com.ecommerce.api.review.repository.ReviewRepository;
 import com.ecommerce.api.review.service.ReviewService;
 import com.ecommerce.api.user.dto.*;
 import com.ecommerce.api.user.entity.User;
@@ -28,10 +25,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ReviewRepository reviewRepository;
-    private final ProductImageUrlResolver productImageUrlResolver;
     private final OrderItemRepository orderItemRepository;
-//    private final ChatRoomRepository chatRoomRepository;
     private final ProductDeletionService productDeletionService;
     private final ReviewService reviewService;
 
@@ -70,13 +64,6 @@ public class UserService {
         return userRepository.findAllByOrderByIdAsc().stream()
                 .map(UserInfoListRes::new)
                 .toList();
-    }
-
-    private UserReviewListRes toUserReviewList(Review review) {
-        String thumbnailUrl = productImageUrlResolver
-                .resolveThumbnail(review.getProduct());
-
-        return UserReviewListRes.of(review, thumbnailUrl);
     }
 
     public User getUser(Long userId) {

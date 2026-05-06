@@ -22,7 +22,6 @@ import static com.ecommerce.api.common.exception.ErrorCode.INVALID_INPUT;
         name = "order_item_coupon",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_order_item_coupon_order_item", columnNames = "order_item_id"),
-                @UniqueConstraint(name = "uk_order_item_coupon_coupon_issued", columnNames = "coupon_issued_id")
         }
 )
 public class OrderItemCoupon extends BaseTimeEntity {
@@ -34,10 +33,6 @@ public class OrderItemCoupon extends BaseTimeEntity {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_item_id", nullable = false)
     private OrderItem orderItem;
-
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "coupon_issued_id", nullable = false)
-    private CouponIssued couponIssued;
 
     @Embedded
     private UsedCouponSnapshot usedCoupon;
@@ -51,7 +46,6 @@ public class OrderItemCoupon extends BaseTimeEntity {
         }
 
         this.orderItem = orderItem;
-        this.couponIssued = couponIssued;
-        this.usedCoupon = new UsedCouponSnapshot(couponIssued.getCouponEvent(), discountedAmount, usedAt);
+        this.usedCoupon = new UsedCouponSnapshot(couponIssued, discountedAmount, usedAt);
     }
 }
