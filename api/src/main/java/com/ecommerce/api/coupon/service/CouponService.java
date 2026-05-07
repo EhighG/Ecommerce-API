@@ -11,7 +11,6 @@ import com.ecommerce.api.coupon.repository.CouponEventRepository;
 import com.ecommerce.api.coupon.repository.CouponIssuedRepository;
 import com.ecommerce.api.user.entity.User;
 import com.ecommerce.api.user.repository.UserRepository;
-import com.ecommerce.api.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -39,7 +38,6 @@ public class CouponService {
     private final CouponIssuedRepository couponIssuedRepository;
     private final UserRepository userRepository;
     private final CouponEventCacheService couponEventCacheService;
-    private final UserService userService;
 
     public CouponEventDetailRes getCouponEventDetail(Long couponEventId) {
         Instant now = Instant.now();
@@ -100,7 +98,7 @@ public class CouponService {
     }
 
     @Transactional
-    public List<CouponIssued> findCoupons(List<Long> couponIssuedIds, Long userId) {
+    public List<CouponIssued> getCoupons(List<Long> couponIssuedIds, Long userId) {
         if (couponIssuedIds == null || couponIssuedIds.isEmpty()) {
             return List.of();
         }

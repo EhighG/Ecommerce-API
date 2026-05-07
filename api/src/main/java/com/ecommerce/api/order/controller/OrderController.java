@@ -4,6 +4,7 @@ import com.ecommerce.api.auth.domain.CustomUserDetails;
 import com.ecommerce.api.order.dto.OrderDetailRes;
 import com.ecommerce.api.order.dto.OrderListRes;
 import com.ecommerce.api.order.dto.OrderReq;
+import com.ecommerce.api.order.service.OrderPlacementService;
 import com.ecommerce.api.order.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,13 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderPlacementService orderPlacementService;
 
     @PostMapping
     public ResponseEntity<Long> order(@Valid @RequestBody OrderReq req,
                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity
-                .ok(orderService.order(req, userDetails.getUserId()));
+                .ok(orderPlacementService.placeOrder(req, userDetails.getUserId()));
     }
 
     @GetMapping("/me")
