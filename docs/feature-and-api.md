@@ -83,6 +83,11 @@ ADMIN -> 관리자
 | 주문항목 구매확정    | `PATCH /api/order-items/{orderItemId}/confirm` | O    | BUYER   |
 | 주문항목 취소      | `PATCH /api/order-items/{orderItemId}/cancel`  | O    | USER   |
 
+- `POST /api/orders` 요청 방식
+  - `items[].cartItemId`: 주문할 장바구니 항목 ID
+  - `items[].orderQuantity`: 주문 수량
+  - `items[].couponIssuedId`: 적용할 발급 쿠폰 ID. 선택값.
+
 - `GET /api/order-items` 조회 방식
   - 구매자 조회: `orderId={orderId}`
   - 판매자 조회: `sellerId={sellerId}`
@@ -91,6 +96,11 @@ ADMIN -> 관리자
   - 구매자 조회에서는 `statusList`를 사용할 수 없다.
   - 페이징은 `page`, `size`로 지정한다.
   - 페이지 사이즈는 20(기본값)/50/100만 허용한다.
+
+- 주문항목 응답의 쿠폰 관련 필드
+  - `linePrice`: 할인 전 주문항목 금액
+  - `usedCoupon`: 사용 쿠폰 요약. 쿠폰 미사용 시 `null`
+  - `finalLinePrice`: 할인 적용 후 주문항목 금액
 
 아래 Payment부분은, 범위에서 제외함.
 ```
@@ -103,6 +113,18 @@ ADMIN -> 관리자
 | 결제 취소 | `PATCH /api/payments/{paymentId}/cancel` |      |  |
 ```
 
+
+## Coupon
+
+| 기능명        | API                                      | 완성여부 | 권한  |
+| ---------- | ---------------------------------------- | ---- | --- |
+| 쿠폰 이벤트 상세 조회 | `GET /api/coupons/events/{couponEventId}` | O    | BUYER |
+| 쿠폰 발급      | `POST /api/coupons/events/{couponEventId}/issue` | O | BUYER |
+| 쿠폰 이벤트 생성 | `POST /api/coupons/events`              | O    | ADMIN |
+
+- 쿠폰 유형: `FIXED_AMOUNT`, `PERCENT`
+- 쿠폰 상태: `ISSUED`, `USED`, `EXPIRED`
+- 쿠폰 유효기간 단위: `MINUTES`, `HOURS`, `DAYS`
 
 ## Review
 
