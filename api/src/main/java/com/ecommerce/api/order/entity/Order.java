@@ -46,7 +46,7 @@ public class Order extends BaseTimeEntity {
         for (OrderLine orderLine : orderLineList) {
             OrderItem orderItem = new OrderItem(orderLine.product(), orderLine.quantity());
             addItem(orderItem);
-            totalPrice += orderItem.getLinePrice();
+            totalPrice += orderLine.finalLinePrice();
         }
     }
 

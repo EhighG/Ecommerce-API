@@ -2,7 +2,9 @@ package com.ecommerce.api.order.vo;
 
 public record OrderLine(
         ProductSnapshot product,
-        int quantity
+        int quantity,
+        Long couponIssuedId,
+        long discountAmount
 ) {
     public OrderLine {
         if (product == null)
@@ -15,5 +17,13 @@ public record OrderLine(
 
     public long linePrice() {
         return product.getUnitPrice() * quantity;
+    }
+
+    public long finalLinePrice() {
+        return linePrice() - discountAmount;
+    }
+
+    public boolean hasCoupon() {
+        return couponIssuedId != null;
     }
 }

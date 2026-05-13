@@ -1,5 +1,8 @@
 package com.ecommerce.api.order.dto;
 
+import com.ecommerce.api.coupon.entity.OrderItemCoupon;
+import com.ecommerce.api.coupon.entity.UsedCouponSnapshot;
+import com.ecommerce.api.coupon.enums.CouponType;
 import com.ecommerce.api.order.entity.OrderItem;
 import com.ecommerce.api.order.enums.OrderStatus;
 import com.ecommerce.api.order.vo.ProductSnapshot;
@@ -13,18 +16,60 @@ public record OrderItemListRes(
         ProductSummary product,
         int quantity,
         long linePrice,
+        UsedCouponSummary usedCoupon,
+        long finalLinePrice,
         OrderStatus status,
         Instant deliveredAt
 ) {
     public OrderItemListRes(OrderItem orderItem, String productThumbnailUrl) {
+        this(orderItem, productThumbnailUrl, null);
+    }
+
+    public OrderItemListRes(OrderItem orderItem, String productThumbnailUrl, OrderItemCoupon orderItemCoupon) {
         this(
                 orderItem.getId(),
                 new ProductSummary(orderItem.getProduct(), productThumbnailUrl),
                 orderItem.getQuantity(),
                 orderItem.getLinePrice(),
+                UsedCouponSummary.from(orderItemCoupon),
+                calculateFinalLinePrice(orderItem, orderItemCoupon),
                 orderItem.getStatus(),
                 orderItem.getDeliveredAt()
         );
+    }
+
+    private static long calculateFinalLinePrice(OrderItem orderItem, OrderItemCoupon orderItemCoupon) {
+        if (orderItemCoupon == null) {
+            return orderItem.getLinePrice();
+        }
+        return orderItem.getLinePrice() - orderItemCoupon.getUsedCoupon().getDiscountedAmount();
+    }
+
+    public record UsedCouponSummary(
+            Long couponIssuedId,
+            String name,
+            CouponType type,
+            long discountValue,
+            long maxDiscountAmount,
+            long discountAmount,
+            Instant usedAt
+    ) {
+        public static UsedCouponSummary from(OrderItemCoupon orderItemCoupon) {
+            if (orderItemCoupon == null) {
+                return null;
+            }
+
+            UsedCouponSnapshot usedCoupon = orderItemCoupon.getUsedCoupon();
+            return new UsedCouponSummary(
+                    usedCoupon.getCouponIssuedId(),
+                    usedCoupon.getName(),
+                    usedCoupon.getType(),
+                    usedCoupon.getDiscountValue(),
+                    usedCoupon.getMaxDiscountAmount(),
+                    usedCoupon.getDiscountedAmount(),
+                    usedCoupon.getUsedAt()
+            );
+        }
     }
 
     public record ProductSummary(

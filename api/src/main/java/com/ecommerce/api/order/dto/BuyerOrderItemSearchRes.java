@@ -1,5 +1,6 @@
 package com.ecommerce.api.order.dto;
 
+import com.ecommerce.api.coupon.entity.OrderItemCoupon;
 import com.ecommerce.api.order.entity.OrderItem;
 import com.ecommerce.api.order.enums.OrderStatus;
 import com.ecommerce.api.order.vo.ProductSnapshot;
@@ -20,16 +21,31 @@ public record BuyerOrderItemSearchRes(
             ProductSummary product,
             int quantity,
             long linePrice,
+            OrderItemListRes.UsedCouponSummary usedCoupon,
+            long finalLinePrice,
             OrderStatus status
     ) {
         public OrderItemSummary(OrderItem orderItem, String productThumbnailUrl) {
+            this(orderItem, productThumbnailUrl, null);
+        }
+
+        public OrderItemSummary(OrderItem orderItem, String productThumbnailUrl, OrderItemCoupon orderItemCoupon) {
             this(
                     orderItem.getId(),
                     new ProductSummary(orderItem.getProduct(), productThumbnailUrl),
                     orderItem.getQuantity(),
                     orderItem.getLinePrice(),
+                    OrderItemListRes.UsedCouponSummary.from(orderItemCoupon),
+                    calculateFinalLinePrice(orderItem, orderItemCoupon),
                     orderItem.getStatus()
             );
+        }
+
+        private static long calculateFinalLinePrice(OrderItem orderItem, OrderItemCoupon orderItemCoupon) {
+            if (orderItemCoupon == null) {
+                return orderItem.getLinePrice();
+            }
+            return orderItem.getLinePrice() - orderItemCoupon.getUsedCoupon().getDiscountedAmount();
         }
     }
 

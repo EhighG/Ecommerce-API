@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -32,7 +33,7 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
 
         try {
             loginReq = objectMapper.readValue(request.getInputStream(), LoginReq.class);
-        } catch (IOException e) {
+        } catch (IOException | JacksonException e) {
             throw new AuthenticationServiceException("로그인 요청 body 파싱 실패", e);
         }
 

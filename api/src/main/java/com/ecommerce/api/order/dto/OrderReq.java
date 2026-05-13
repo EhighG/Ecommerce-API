@@ -12,6 +12,7 @@ public record OrderReq(
 ) {
     public record OrderItemReq(
             @NotNull Long cartItemId,
-            @NotNull @Positive Integer orderQuantity
+            @NotNull @Positive Integer orderQuantity,
+            Long couponIssuedId
     ) {}
 }
