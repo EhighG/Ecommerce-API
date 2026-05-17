@@ -127,14 +127,18 @@ public class OrderPlacementService {
                 ));
     }
 
+    // 데드락 방지를 위해 update 순서 통일, 단건 업데이트로 변경
     private void updateProductOrderCount(List<OrderItem> orderItems) {
         List<Long> productIds = orderItems.stream()
                 .map(orderItem -> orderItem.getProduct().getId())
+                .sorted()
                 .toList();
 
-        int updatedCount = productStatRepository.increaseOrderItemCountIn(productIds, 1L);
-        if (updatedCount != productIds.size()) {
-            throw new AppException(PRODUCT_STAT_NOT_FOUND);
+        for (Long productId : productIds) {
+            int updatedCount = productStatRepository.increaseOrderItemCount(productId, 1L);
+            if (updatedCount != 1) {
+                throw new AppException(PRODUCT_STAT_NOT_FOUND);
+            }
         }
     }
 

@@ -5,17 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
-import java.util.List;
-
 public interface ProductStatRepository extends JpaRepository<ProductStat, Long> {
-
-    @Modifying
-    @Query("""
-            update ProductStat ps
-            set ps.orderItemCount = ps.orderItemCount + :delta
-            where ps.productId in :productIds
-            """)
-    int increaseOrderItemCountIn(List<Long> productIds, long delta);
 
     @Modifying
     @Query("""

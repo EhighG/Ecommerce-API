@@ -184,12 +184,13 @@ public class OrderItemService {
             couponService.restoreCouponIssued(couponIssuedId, Instant.now());
         }
 
+        // 데드락 방지를 위해 주문생성과 테이블 업데이트 순서 통일(inventory -> product_stat)
+        inventoryService.restore(orderItem.getProduct().getId(), orderItem.getQuantity());
+
         int updatedCount = productStatRepository.increaseOrderItemCount(orderItem.getProduct().getId(), -1L);
         if (updatedCount != 1) {
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
         }
-
-        inventoryService.restore(orderItem.getProduct().getId(), orderItem.getQuantity());
     }
 
     private boolean isSeller(OrderItem orderItem, Long userId) {
