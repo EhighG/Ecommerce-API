@@ -10,9 +10,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
@@ -34,38 +37,46 @@ public class InventoryService {
                 .orElseThrow(() -> new AppException(NO_INVENTORY_FOR_PRODUCT));
     }
 
-//    public void validateInventory(List<CartItem> cartItemList) {
-//        for (CartItem cartItem : cartItemList) {
-//            Inventory inventory = getInventoryByProductId(cartItem.getProduct().getId());
-//            if (inventory.getQuantity() < cartItem.getQuantity()) {
-//                throw new AppException(ErrorCode.INSUFFICIENT_INVENTORY);
-//            }
-//        }
-//    }
-
     @Transactional
     public void validateAndDeduct(List<OrderLine> orderLines) {
-        List<Long> productIds = orderLines.stream()
-                .map(orderLine -> orderLine.product().getId())
-                .distinct()
+        Map<Long, Integer> quantityByProductId = new HashMap<>();
+        for (OrderLine orderLine : orderLines) {
+            quantityByProductId.merge(orderLine.product().getId(), orderLine.quantity(), Integer::sum);
+        }
+
+        // update 순서 통일(데드락 방지)을 위해 정렬
+        List<Long> productIds = quantityByProductId.keySet().stream()
+                .sorted()
                 .toList();
 
-        Map<Long, Inventory> inventoryMap = new HashMap<>();
-        inventoryRepository.findAllByProductIdInForUpdate(productIds)
-                .forEach(inventory -> {
-                    inventoryMap.put(inventory.getProduct().getId(), inventory);
-                });
+        Map<Long, Inventory> inventoryByProductId = inventoryRepository.findAllByProductIdIn(productIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        inventory -> inventory.getProduct().getId(),
+                        Function.identity()
+                ));
 
-        for (OrderLine orderLine : orderLines) {
-            Inventory inventory = inventoryMap.get(orderLine.product().getId());
-            if (inventory == null) {
-                throw new AppException(NO_INVENTORY_FOR_PRODUCT);
-            }
-            if (inventory.getQuantity() < orderLine.quantity()) {
+        if (inventoryByProductId.size() != productIds.size()) {
+            throw new AppException(NO_INVENTORY_FOR_PRODUCT);
+        }
+
+        // 재고 부족을 앱 단에서 미리 거를 수 있으면, 거름
+        for (Long productId : productIds) {
+            int orderQuantity = quantityByProductId.get(productId);
+            Inventory inventory = inventoryByProductId.get(productId);
+
+            if (inventory.getQuantity() < orderQuantity) {
                 throw new AppException(INSUFFICIENT_INVENTORY);
             }
+        }
 
-            inventory.adjust(orderLine.quantity() * -1);
+        for (Long productId : productIds) {
+            int orderQuantity = quantityByProductId.get(productId);
+            int updatedCount = inventoryRepository.deductIfEnoughQuantity(productId, orderQuantity, Instant.now());
+
+            if (updatedCount != 1) {
+                throw new AppException(INSUFFICIENT_INVENTORY);
+            }
         }
     }
 
