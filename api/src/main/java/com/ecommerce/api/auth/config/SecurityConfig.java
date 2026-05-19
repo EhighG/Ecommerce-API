@@ -3,8 +3,10 @@ package com.ecommerce.api.auth.config;
 import com.ecommerce.api.auth.LoginFailureHandler;
 import com.ecommerce.api.auth.LoginSuccessHandler;
 import com.ecommerce.api.auth.filter.JsonUsernamePasswordAuthenticationFilter;
+import com.ecommerce.api.auth.filter.LoadTestAuthenticationFilter;
 import com.ecommerce.api.user.enums.UserRole;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -136,7 +138,8 @@ public class SecurityConfig {
     @Order(2)
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             AuthenticationManager authenticationManager,
-                                            ObjectMapper objectMapper
+                                            ObjectMapper objectMapper,
+                                            ObjectProvider<LoadTestAuthenticationFilter> loadTestAuthenticationFilterProvider
     ) throws Exception {
         JsonUsernamePasswordAuthenticationFilter authenticationFilter = new JsonUsernamePasswordAuthenticationFilter(objectMapper);
 
@@ -173,9 +176,6 @@ public class SecurityConfig {
                 )
                 // CORS
                 .cors(withDefaults())
-                // CSRF
-                //
-                .csrf(withDefaults())
                 // 구현한 로그인 필터 추가
                 // formLogin을 disable하면서 비워진 UsernamePasswordAuthenticationFilter자리에 구현한 필터를 삽입
                 .addFilterAt(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -189,6 +189,18 @@ public class SecurityConfig {
                             response.setStatus(HttpServletResponse.SC_OK);
                         })
                 );
+
+        // CSRF
+        // 부하테스트 시, yaml설정에 따라 인증 및 CSRF 우회
+        LoadTestAuthenticationFilter testAuthFilter = loadTestAuthenticationFilterProvider.getIfAvailable();
+        if (testAuthFilter != null) {
+            http.addFilterBefore(testAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            http.csrf(csrf ->
+                    csrf.ignoringRequestMatchers(LoadTestAuthenticationFilter::isTestRequest)
+            );
+        } else {
+            http.csrf(withDefaults());
+        }
 
         return http.build();
     }
