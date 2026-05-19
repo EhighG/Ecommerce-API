@@ -40,6 +40,11 @@ app:
       upload-prefix: ${GCS_UPLOAD_PREFIX}
       public-base-url: https://storage.googleapis.com/${GCS_BUCKET}
 
+  loadtest:
+    auth:
+      enabled: ${LOADTEST_AUTH_ENABLED:false}
+      secret: ${LOADTEST_AUTH_SECRET}
+
 management:
   metrics:
     distribution:
