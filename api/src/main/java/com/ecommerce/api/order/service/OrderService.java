@@ -40,7 +40,9 @@ public class OrderService {
     }
 
     public OrderDetailRes getMyOrderDetail(Long orderId, Long userId) {
-        Order order = getOrder(orderId);
+        // 의도 명시 및 추가 조회쿼리 방지를 위해 별도 조회 메서드 사용
+        Order order = orderRepository.findDetailById(orderId)
+                .orElseThrow(() -> new AppException(ORDER_NOT_FOUND));
 
         if (!order.getBuyer().getId().equals(userId))
             throw new AppException(ORDER_ACCESS_DENIED);
