@@ -109,7 +109,6 @@ public class UserService {
         checkPassword(user, req.password());
 
         validateWithdrawable(user);
-//        leaveAllChatRoom(user);
 
         if (user.getRole() == UserRole.SELLER)
             productDeletionService.deleteAllBySeller(user.getId());
