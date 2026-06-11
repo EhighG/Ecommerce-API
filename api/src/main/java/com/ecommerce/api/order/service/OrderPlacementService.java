@@ -13,7 +13,8 @@ import com.ecommerce.api.order.entity.OrderItem;
 import com.ecommerce.api.order.repository.OrderRepository;
 import com.ecommerce.api.order.vo.OrderLine;
 import com.ecommerce.api.order.vo.ProductSnapshot;
-import com.ecommerce.api.product.repository.ProductStatRepository;
+import com.ecommerce.api.product.repository.ProductStatJdbcRepository;
+import com.ecommerce.api.product.repository.ProductStatJdbcRepository.IncreaseOrderCountCommand;
 import com.ecommerce.api.user.entity.User;
 import com.ecommerce.api.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -34,11 +36,11 @@ public class OrderPlacementService {
 
     private final OrderRepository orderRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductStatRepository productStatRepository;
     private final UserService userService;
     private final InventoryService inventoryService;
     private final CouponService couponService;
     private final OrderItemCouponService orderItemCouponService;
+    private final ProductStatJdbcRepository productStatJdbcRepository;
 
     @Transactional
     public Long placeOrder(OrderReq req, Long userId) {
@@ -127,19 +129,21 @@ public class OrderPlacementService {
                 ));
     }
 
-    // 데드락 방지를 위해 update 순서 통일, 단건 업데이트로 변경
+    // jdbc 배치 업데이트로 변경
     private void updateProductOrderCount(List<OrderItem> orderItems) {
-        List<Long> productIds = orderItems.stream()
-                .map(orderItem -> orderItem.getProduct().getId())
-                .sorted()
+        List<IncreaseOrderCountCommand> commands = orderItems.stream()
+                .collect(Collectors.groupingBy(
+                        orderItem -> orderItem.getProduct().getId(),
+                        Collectors.counting()
+                ))
+                .entrySet().stream()
+                .map(entry -> new IncreaseOrderCountCommand(
+                        entry.getKey(),
+                        entry.getValue()
+                ))
                 .toList();
 
-        for (Long productId : productIds) {
-            int updatedCount = productStatRepository.increaseOrderItemCount(productId, 1L);
-            if (updatedCount != 1) {
-                throw new AppException(PRODUCT_STAT_NOT_FOUND);
-            }
-        }
+        productStatJdbcRepository.increaseOrderCounts(commands);
     }
 
     private void createUsedCouponSnapshot(List<OrderLine> orderLines, List<OrderItem> orderItems,
@@ -158,15 +162,17 @@ public class OrderPlacementService {
     }
 
     private void deleteOrderedCartItem(OrderReq req, Map<Long, CartItem> cartItemById) {
-        req.items().forEach(item -> {
-            int orderQuantity = item.orderQuantity();
-            CartItem cartItem = cartItemById.get(item.cartItemId());
+        req.items().stream()
+                .sorted(Comparator.comparingLong(OrderReq.OrderItemReq::cartItemId))
+                .forEach(item -> {
+                    int orderQuantity = item.orderQuantity();
+                    CartItem cartItem = cartItemById.get(item.cartItemId());
 
-            if (orderQuantity >= cartItem.getQuantity()) {
-                cartItemRepository.delete(cartItem);
-            } else {
-                cartItem.adjustQuantity(-1 * orderQuantity);
-            }
-        });
+                    if (orderQuantity >= cartItem.getQuantity()) {
+                        cartItemRepository.delete(cartItem);
+                    } else {
+                        cartItem.adjustQuantity(-1 * orderQuantity);
+                    }
+                });
     }
 }
