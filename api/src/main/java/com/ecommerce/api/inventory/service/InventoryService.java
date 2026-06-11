@@ -3,6 +3,8 @@ package com.ecommerce.api.inventory.service;
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.inventory.dto.ModifyInventoryReq;
 import com.ecommerce.api.inventory.entity.Inventory;
+import com.ecommerce.api.inventory.repository.InventoryJdbcRepository;
+import com.ecommerce.api.inventory.repository.InventoryJdbcRepository.DeductInventoryCommand;
 import com.ecommerce.api.inventory.repository.InventoryRepository;
 import com.ecommerce.api.order.vo.OrderLine;
 import com.ecommerce.api.product.entity.Product;
@@ -14,8 +16,6 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
@@ -25,6 +25,7 @@ import static com.ecommerce.api.common.exception.ErrorCode.*;
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryJdbcRepository inventoryJdbcRepository;
 
     @Transactional
     public void createInventory(Product product, int quantity) {
@@ -44,40 +45,15 @@ public class InventoryService {
             quantityByProductId.merge(orderLine.product().getId(), orderLine.quantity(), Integer::sum);
         }
 
-        // update 순서 통일(데드락 방지)을 위해 정렬
-        List<Long> productIds = quantityByProductId.keySet().stream()
-                .sorted()
-                .toList();
+        List<DeductInventoryCommand> commands =
+                quantityByProductId.entrySet().stream()
+                        .map(entry -> new DeductInventoryCommand(
+                                entry.getKey(),
+                                entry.getValue()
+                        ))
+                        .toList();
 
-        Map<Long, Inventory> inventoryByProductId = inventoryRepository.findAllByProductIdIn(productIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        inventory -> inventory.getProduct().getId(),
-                        Function.identity()
-                ));
-
-        if (inventoryByProductId.size() != productIds.size()) {
-            throw new AppException(NO_INVENTORY_FOR_PRODUCT);
-        }
-
-        // 재고 부족을 앱 단에서 미리 거를 수 있으면, 거름
-        for (Long productId : productIds) {
-            int orderQuantity = quantityByProductId.get(productId);
-            Inventory inventory = inventoryByProductId.get(productId);
-
-            if (inventory.getQuantity() < orderQuantity) {
-                throw new AppException(INSUFFICIENT_INVENTORY);
-            }
-        }
-
-        for (Long productId : productIds) {
-            int orderQuantity = quantityByProductId.get(productId);
-            int updatedCount = inventoryRepository.deductIfEnoughQuantity(productId, orderQuantity, Instant.now());
-
-            if (updatedCount != 1) {
-                throw new AppException(INSUFFICIENT_INVENTORY);
-            }
-        }
+        inventoryJdbcRepository.deductAll(commands, Instant.now());
     }
 
     @Transactional
