@@ -32,3 +32,4 @@ replay_pid*
 # ETC
 ignore/
 k6/data/
+**/.env
