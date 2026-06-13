@@ -104,8 +104,6 @@ values (
     utc_timestamp()
 );
 
-select * from coupon_event;
-
 insert into coupon_issued (
   coupon_event_id, user_id, status,
   issued_at, expires_at, used_at,
