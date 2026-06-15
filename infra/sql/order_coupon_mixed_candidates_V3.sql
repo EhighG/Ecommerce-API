@@ -261,8 +261,8 @@ select
   cartItemId,
   productId,
   orderQuantity,
-  couponEventId,
-  couponIssueId,
+  coalesce(couponEventId, '') as couponEventId,
+  coalesce(couponIssuedId, '') as couponIssuedId,
   cancelAfterOrder
 from mixed_rows
 order by sort_bucket, sort_type, cartItemId;
