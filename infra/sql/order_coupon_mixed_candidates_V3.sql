@@ -154,7 +154,7 @@ with coupon_source as (
     p.id as productId,
     1 as orderQuantity,
     ce.id as couponEventId,
-    ci_coupon.id as couponIssueId,
+    ci_coupon.id as couponIssuedId,
     case when mod(ci_cart.id, 3) = 0 then 'true' else 'false' end as cancelAfterOrder,
     row_number() over (
       partition by ci_coupon.id
@@ -183,8 +183,8 @@ with coupon_source as (
 coupon_ranked as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssueId, cancelAfterOrder,
-    row_number() over (order by couponIssueId) as rn
+    couponEventId, couponIssuedId, cancelAfterOrder,
+    row_number() over (order by couponIssuedId) as rn
   from coupon_source
   where coupon_rn = 1
     and cart_rn = 1
@@ -192,7 +192,7 @@ coupon_ranked as (
 coupon_rows as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssueId, cancelAfterOrder, rn
+    couponEventId, couponIssuedId, cancelAfterOrder, rn
   from coupon_ranked
   where rn <= @target_coupon_rows
 ),
@@ -204,7 +204,7 @@ normal_source as (
     p.id as productId,
     1 as orderQuantity,
     null as couponEventId,
-    null as couponIssueId,
+    null as couponIssuedId,
     case when mod(ci.id, 5) = 0 then 'true' else 'false' end as cancelAfterOrder
   from cart_item ci
   join users u on u.id = ci.user_id
@@ -225,7 +225,7 @@ normal_source as (
 normal_ranked as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssueId, cancelAfterOrder,
+    couponEventId, couponIssuedId, cancelAfterOrder,
     row_number() over (
       order by mod(userId * 131 + cartItemId * 17, 1000003), cartItemId
     ) as rn
@@ -234,14 +234,14 @@ normal_ranked as (
 normal_rows as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssueId, cancelAfterOrder, rn
+    couponEventId, couponIssuedId, cancelAfterOrder, rn
   from normal_ranked
   where rn <= @target_normal_rows
 ),
 mixed_rows as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssueId, cancelAfterOrder,
+    couponEventId, couponIssuedId, cancelAfterOrder,
     floor((rn - 0.5) * @target_total_rows / @target_coupon_rows) as sort_bucket,
     0 as sort_type
   from coupon_rows
@@ -250,7 +250,7 @@ mixed_rows as (
 
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssueId, cancelAfterOrder,
+    couponEventId, couponIssuedId, cancelAfterOrder,
     floor((rn - 0.5) * @target_total_rows / @target_normal_rows) as sort_bucket,
     1 as sort_type
   from normal_rows
