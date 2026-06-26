@@ -383,10 +383,13 @@ function currentSchedule() {
 
 function currentMetricTags(extra = {}) {
   const item = currentSchedule();
-  return {
-    phase: item?.phase || "measure",
-    ...extra,
+  const tags = {
+    phase: (item && item.phase) || "measure",
   };
+  Object.keys(extra).forEach((key) => {
+    tags[key] = extra[key];
+  });
+  return tags;
 }
 
 function currentRequestTags(name) {
@@ -395,7 +398,7 @@ function currentRequestTags(name) {
 
 function isMeasurementIteration() {
   const item = currentSchedule();
-  return item?.includeInThresholds !== false;
+  return !item || item.includeInThresholds !== false;
 }
 
 function addMeasureCounter(counter, value = 1, extraTags = {}) {
@@ -405,10 +408,11 @@ function addMeasureCounter(counter, value = 1, extraTags = {}) {
 }
 
 function addError(type, extraTags = {}) {
-  addMeasureCounter(orderCouponErrorTotal, 1, {
-    type,
-    ...extraTags,
+  const tags = { type };
+  Object.keys(extraTags).forEach((key) => {
+    tags[key] = extraTags[key];
   });
+  addMeasureCounter(orderCouponErrorTotal, 1, tags);
 }
 
 function runCheck(value, checks) {
@@ -446,7 +450,7 @@ function logScenarioStartIfNeeded() {
   const item = currentSchedule();
   const rate = item ? item.rate : "unknown";
   console.log(
-    `[loadtest] actual stage_start scenario=${scenario.name} phase=${item?.phase || "unknown"} rate=${rate}iter/s time="${formatTime(new Date())}"`,
+    `[loadtest] actual stage_start scenario=${scenario.name} phase=${(item && item.phase) || "unknown"} rate=${rate}iter/s time="${formatTime(new Date())}"`,
   );
 }
 
@@ -541,11 +545,13 @@ function loadtestAuthHeaders(candidate, headers = {}) {
     fail(`candidate missing userId: email=${candidate.email}`);
   }
 
-  return {
-    ...headers,
-    "X-LoadTest-User-Id": String(candidate.userId),
-    "X-LoadTest-Secret": LOADTEST_AUTH_SECRET,
-  };
+  const result = {};
+  Object.keys(headers).forEach((key) => {
+    result[key] = headers[key];
+  });
+  result["X-LoadTest-User-Id"] = String(candidate.userId);
+  result["X-LoadTest-Secret"] = LOADTEST_AUTH_SECRET;
+  return result;
 }
 
 function recordLatency(metric, res) {
@@ -564,7 +570,7 @@ function getOrderDetail(orderId, candidate, metric, name = "GET /orders/{id}") {
 }
 
 function findTargetOrderItem(orderDetail, candidate) {
-  const items = orderDetail?.itemList;
+  const items = orderDetail && orderDetail.itemList;
   if (!Array.isArray(items) || items.length === 0) {
     return null;
   }
@@ -572,7 +578,8 @@ function findTargetOrderItem(orderDetail, candidate) {
   if (candidate.couponIssueId) {
     const couponItem = items.find(
       (item) =>
-        Number(item?.usedCoupon?.couponIssuedId) === candidate.couponIssueId,
+        Number(item && item.usedCoupon && item.usedCoupon.couponIssuedId) ===
+        candidate.couponIssueId,
     );
     if (couponItem) {
       return couponItem;
@@ -581,7 +588,9 @@ function findTargetOrderItem(orderDetail, candidate) {
 
   return (
     items.find(
-      (item) => Number(item?.product?.productId) === candidate.productId,
+      (item) =>
+        Number(item && item.product && item.product.productId) ===
+        candidate.productId,
     ) || items[0]
   );
 }
@@ -591,33 +600,37 @@ function logCandidateFailure(label, candidate, extra = {}) {
     return;
   }
 
+  const payload = {
+    label,
+    iteration: scenario.iterationInTest,
+    email: candidate.email,
+    userId: candidate.userId,
+    cartItemId: candidate.cartItemId,
+    productId: candidate.productId,
+    orderQuantity: candidate.orderQuantity,
+    couponEventId: candidate.couponEventId,
+    couponIssueId: candidate.couponIssueId,
+  };
+  Object.keys(extra).forEach((key) => {
+    payload[key] = extra[key];
+  });
+
   console.error(
-    JSON.stringify({
-      label,
-      iteration: scenario.iterationInTest,
-      email: candidate.email,
-      userId: candidate.userId,
-      cartItemId: candidate.cartItemId,
-      productId: candidate.productId,
-      orderQuantity: candidate.orderQuantity,
-      couponEventId: candidate.couponEventId,
-      couponIssueId: candidate.couponIssueId,
-      ...extra,
-    }),
+    JSON.stringify(payload),
   );
 }
 
 function recordExpectedFailure(type, label, candidate, res, requestBody) {
+  const apiError = readApiError(res);
   addMeasureCounter(orderCouponExpectedFailure);
   addError(type, {
     status: String(res.status),
-    code: String(readApiError(res)?.code || "none"),
+    code: String((apiError && apiError.code) || "none"),
   });
   if (!FAILURE_DETAIL_LOGGING_ENABLED) {
     return;
   }
 
-  const apiError = readApiError(res);
   console.log(
     JSON.stringify({
       label,
@@ -629,18 +642,19 @@ function recordExpectedFailure(type, label, candidate, res, requestBody) {
       couponEventId: candidate.couponEventId,
       couponIssueId: candidate.couponIssueId,
       status: res.status,
-      errorCode: apiError?.code,
-      errorMessage: apiError?.message,
+      errorCode: apiError && apiError.code,
+      errorMessage: apiError && apiError.message,
       requestBody,
     }),
   );
 }
 
 function recordUnexpectedFailure(type, label, candidate, res, requestBody) {
+  const apiError = readApiError(res);
   addMeasureCounter(orderCouponUnexpectedFailure);
   addError(type, {
-    status: String(res?.status || "none"),
-    code: String(readApiError(res)?.code || "none"),
+    status: String((res && res.status) || "none"),
+    code: String((apiError && apiError.code) || "none"),
   });
   if (FAILURE_DETAIL_LOGGING_ENABLED) {
     logUnexpectedResponse(label, res, {
@@ -652,9 +666,9 @@ function recordUnexpectedFailure(type, label, candidate, res, requestBody) {
     });
   }
   logCandidateFailure(label, candidate, {
-    status: res?.status,
+    status: res && res.status,
     requestBody,
-    responseBody: res?.body,
+    responseBody: res && res.body,
   });
 }
 
@@ -728,7 +742,11 @@ function runOrderCouponMixedFlow() {
     "order detail has target item": () => !!targetOrderItem,
     "coupon order has used coupon": () =>
       !candidate.couponIssueId ||
-      Number(targetOrderItem?.usedCoupon?.couponIssuedId) ===
+      Number(
+        targetOrderItem &&
+          targetOrderItem.usedCoupon &&
+          targetOrderItem.usedCoupon.couponIssuedId,
+      ) ===
         candidate.couponIssueId,
   });
   if (!detailOk) {
@@ -812,7 +830,7 @@ function runOrderCouponMixedFlow() {
   const afterCancelOk = runCheck(afterCancel.res, {
     "order detail after cancel status is 200": (r) => r.status === 200,
     "order item status is canceled": () =>
-      canceledOrderItem?.status === "CANCELED",
+      canceledOrderItem && canceledOrderItem.status === "CANCELED",
   });
   if (!afterCancelOk) {
     recordUnexpectedFailure(

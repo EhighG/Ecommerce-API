@@ -43,7 +43,8 @@ export function checkApiError(res, expectedStatus, expectedCode) {
 
   return check(res, {
     [`status is ${expectedStatus}`]: (r) => r.status === expectedStatus,
-    [`error code is ${expectedCode}`]: () => apiError?.code === expectedCode,
+    [`error code is ${expectedCode}`]: () =>
+      apiError && apiError.code === expectedCode,
   });
 }
 
@@ -55,8 +56,11 @@ export function getCsrf(baseUrl, options = {}) {
 
   const ok = check(res, {
     'csrf status is 200': (r) => r.status === 200,
-    'csrf headerName exists': () => typeof csrf?.headerName === 'string' && csrf.headerName.length > 0,
-    'csrf token exists': () => typeof csrf?.token === 'string' && csrf.token.length > 0,
+    'csrf headerName exists': () =>
+      typeof (csrf && csrf.headerName) === 'string' &&
+      csrf.headerName.length > 0,
+    'csrf token exists': () =>
+      typeof (csrf && csrf.token) === 'string' && csrf.token.length > 0,
   });
 
   if (!ok && options.failOnError !== false) {
@@ -68,20 +72,23 @@ export function getCsrf(baseUrl, options = {}) {
 }
 
 export function withCsrfHeaders(csrf, headers = {}) {
-  return {
-    ...headers,
-    [csrf.headerName]: csrf.token,
-  };
+  const result = {};
+  Object.keys(headers).forEach((key) => {
+    result[key] = headers[key];
+  });
+  result[csrf.headerName] = csrf.token;
+  return result;
 }
 
 export function requestWithCsrfRetry(method, baseUrl, path, body, csrfRef, options = {}) {
   const hasJsonBody = body !== null && body !== undefined;
   const requestBody = hasJsonBody ? JSON.stringify(body) : null;
+  const headers = options.headers || {};
+  if (hasJsonBody) {
+    headers['Content-Type'] = 'application/json';
+  }
   const params = {
-    headers: withCsrfHeaders(csrfRef.value, {
-      ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.headers || {}),
-    }),
+    headers: withCsrfHeaders(csrfRef.value, headers),
     tags: options.tags,
   };
 
@@ -94,11 +101,8 @@ export function requestWithCsrfRetry(method, baseUrl, path, body, csrfRef, optio
   csrfRef.value = getCsrf(baseUrl);
 
   return http.request(method, `${baseUrl}${path}`, requestBody, {
-    ...params,
-    headers: withCsrfHeaders(csrfRef.value, {
-      ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.headers || {}),
-    }),
+    headers: withCsrfHeaders(csrfRef.value, headers),
+    tags: params.tags,
   });
 }
 
