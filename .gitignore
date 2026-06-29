@@ -33,3 +33,4 @@ replay_pid*
 ignore/
 k6/data/
 **/.env
+.omo/
