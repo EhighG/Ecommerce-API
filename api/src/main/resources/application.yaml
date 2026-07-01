@@ -23,3 +23,8 @@ management:
 app:
   storage:
     provider: gcs
+
+  product-view-count:
+    flush:
+      batch-size: ${PRODUCT_VIEW_COUNT_FLUSH_BATCH_SIZE}
+      max-batches-per-run: ${PRODUCT_VIEW_COUNT_FLUSH_MAX_BATCHES_PER_RUN}

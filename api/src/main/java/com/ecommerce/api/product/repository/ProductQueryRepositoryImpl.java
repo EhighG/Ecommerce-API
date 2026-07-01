@@ -164,7 +164,7 @@ public class ProductQueryRepositoryImpl implements ProductQueryRepository {
         return switch (condition.sortBy()) {
             case ORDER_COUNT -> new OrderSpecifier<>(toOrder(condition), productStat.orderItemCount);
             case RATING -> new OrderSpecifier<>(toOrder(condition), productStat.ratingAvg);
-            case VIEW_COUNT -> new OrderSpecifier<>(toOrder(condition), product.viewCount);
+            case VIEW_COUNT -> new OrderSpecifier<>(toOrder(condition), productStat.viewCount);
             case PRICE -> new OrderSpecifier<>(toOrder(condition), product.unitPrice);
             case REG_DATE -> new OrderSpecifier<>(toOrder(condition), product.createdAt);
         };

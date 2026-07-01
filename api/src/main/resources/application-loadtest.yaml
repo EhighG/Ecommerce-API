@@ -27,6 +27,14 @@ spring:
       password: ${REDIS_PASSWORD}
       timeout: 3s
 
+  # store session in redis
+  session:
+    store-type: redis
+    timeout: 30m
+    data:
+      redis:
+        namespace: ecommerce:session
+
 server:
   tomcat:
     mbeanregistry:

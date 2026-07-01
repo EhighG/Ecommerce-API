@@ -39,4 +39,4 @@ out/
 ### else ###
 /compose.yaml
 **/application-secret.yaml
-/infra/gcp/service-account.json
+/infra/gcp/
