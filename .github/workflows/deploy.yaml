@@ -21,6 +21,7 @@ jobs:
       REPOSITORY: ${{ vars.ARTIFACT_REPOSITORY }}
       IMAGE_NAME: ${{ vars.API_SERVER_IMAGE_NAME }}
       IMAGE_URI: asia-northeast3-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REPOSITORY }}/${{ vars.API_SERVER_IMAGE_NAME }}
+      MIG_WAIT_TIMEOUT_SECONDS: 1200
 
     steps:
       - name: Checkout
@@ -71,7 +72,7 @@ jobs:
             --max-unavailable=100% \
             --max-surge=0
 
-          gcloud compute instance-groups managed wait-until "${{ vars.MIG_NAME }}" \
+          gcloud compute instance-groups managed wait-until "instance-group-2" \
             --zone "$ZONE" \
             --stable \
-            --timeout=20m
+            --timeout="$MIG_WAIT_TIMEOUT_SECONDS"
