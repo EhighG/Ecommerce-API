@@ -20,6 +20,9 @@ public class ProductStat {
     private Product product;
 
     @Column(nullable = false)
+    private long viewCount = 0L;
+
+    @Column(nullable = false)
     private long orderItemCount = 0L;
 
     @Column(nullable = false)

@@ -64,9 +64,14 @@ jobs:
           docker push "$IMAGE_URI:${{ github.sha }}"
           docker push "$IMAGE_URI:latest"
 
-      - name: Deploy to app VM
+      - name: Recreate MIG instances
         run: |
-          gcloud compute ssh "$INSTANCE_NAME" \
+          gcloud compute instance-groups managed rolling-action replace "${{ vars.MIG_NAME }}" \
             --zone "$ZONE" \
-            --tunnel-through-iap \
-            --command "sudo bash -lc 'cd /opt/ecommerce && docker compose pull app && docker compose up -d app'"
+            --max-unavailable=100% \
+            --max-surge=0
+
+          gcloud compute instance-groups managed wait-until "${{ vars.MIG_NAME }}" \
+            --zone "$ZONE" \
+            --stable \
+            --timeout=20m

@@ -42,6 +42,33 @@ public class ProductStatJdbcRepository {
         }
     }
 
+    public void increaseViewCounts(List<IncreaseViewCountCommand> commands) {
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+
+        List<Object[]> batchArgs = commands.stream()
+                .sorted(Comparator.comparingLong(IncreaseViewCountCommand::productId))
+                .map(cmd -> new Object[]{
+                        cmd.delta(),
+                        cmd.productId()
+                })
+                .toList();
+
+        int[] counts = jdbcTemplate.batchUpdate("""
+                update product_stat
+                set view_count = view_count + ?
+                where product_id = ?
+                """, batchArgs);
+
+        for (int count : counts) {
+            if (count != 1) {
+                throw new AppException(PRODUCT_STAT_NOT_FOUND);
+            }
+        }
+    }
 
     public record IncreaseOrderCountCommand(long productId, long delta) {}
+
+    public record IncreaseViewCountCommand(long productId, long delta) {}
 }

@@ -36,12 +36,4 @@ public interface ProductRepository extends JpaRepository<Product, Long>, Product
             where p.id in :productIds
             """)
     void softDeleteAllByIdIn(List<Long> productIds);
-
-    @Modifying
-    @Query("""
-            update Product p
-            set p.viewCount = p.viewCount + :delta
-            where p.id = :productId
-            """)
-    void increaseViewCount(Long productId, long delta);
 }

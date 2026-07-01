@@ -24,10 +24,6 @@ import org.hibernate.annotations.SQLDelete;
                 @Index(
                         name = "idx_product_category_deleted_created_id",
                         columnList = "product_category_id, deleted, created_at DESC, id DESC"
-                ),
-                @Index(
-                        name = "idx_product_category_deleted_view_count_id",
-                        columnList = "product_category_id, deleted, view_count DESC, id DESC"
                 )
         }
 )
@@ -59,9 +55,6 @@ public class Product extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
-
-    @Column(nullable = false)
-    private long viewCount = 0L;
 
     @Column(nullable = false)
     private boolean deleted = false;
