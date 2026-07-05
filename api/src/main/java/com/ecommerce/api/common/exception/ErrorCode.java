@@ -77,6 +77,13 @@ public enum ErrorCode {
     INVALID_INPUT(BAD_REQUEST, 9001, "Invalid input"),
     ORDER_QUANTITY_MUST_PLUS(BAD_REQUEST, 9002, "Quantity must be greater than 0"),
 
+    // 91xx: Idempotency
+    IDEMPOTENCY_KEY_REQUIRED(BAD_REQUEST, 9100, "Idempotency-Key 헤더가 없습니다."),
+    IDEMPOTENCY_KEY_INVALID(BAD_REQUEST, 9101, "Invalid Idempotency-Key"),
+    IDEMPOTENCY_KEY_CONFLICT(CONFLICT, 9102, "중복된 Idempotency-Key입니다."),
+    IDEMPOTENCY_REQUEST_PROCESSING(CONFLICT, 9103, "동일한 요청이 이미 처리중입니다."),
+
+
 
     // 9999: 미식별
     UNRECOGNIZED(INTERNAL_SERVER_ERROR, 9999, "미식별 오류"),
