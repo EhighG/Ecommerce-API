@@ -34,6 +34,7 @@ public enum ErrorCode {
     ORDER_ACCESS_DENIED(ORDER_NOT_FOUND.httpStatus, 3001, ORDER_NOT_FOUND.message),
     ORDER_ITEM_NOT_FOUND(NOT_FOUND, 3002, "OrderItem not found"),
     WRONG_STATUS_CHANGE(BAD_REQUEST, 3003, "해당 처리가 불가능한 주문입니다."),
+    ORDER_STATUS_CONFLICT(CONFLICT, 3004, "주문 상태가 변경되었습니다. 다시 시도해주세요."),
 
 //    // 4xxx: Payment
 //    PAYMENT_ALREADY_EXISTS(CONFLICT, 4001, "Payment already exists"),

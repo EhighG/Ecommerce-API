@@ -175,7 +175,12 @@ public class OrderItemService {
         if (!isSeller(orderItem, userId) && !isBuyer(orderItem, userId))
             throw new AppException(ORDER_ACCESS_DENIED);
 
-        orderItem.cancel();
+        boolean canceled = orderItem.cancel();
+
+        // 이미 취소된 건이면 그냥 성공처리
+        if (!canceled) {
+            return;
+        }
 
         // 사용했던 쿠폰 있으면 복구
         OrderItemCoupon usedCoupon = orderItemCouponService.findByOrderItemId(orderItemId);

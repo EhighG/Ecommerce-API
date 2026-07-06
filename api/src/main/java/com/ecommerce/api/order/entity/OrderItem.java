@@ -40,6 +40,10 @@ public class OrderItem {
 
     private Instant deliveredAt;
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     public OrderItem(ProductSnapshot product, int quantity) {
         this.product = product;
         this.quantity = quantity;
@@ -70,9 +74,14 @@ public class OrderItem {
         this.status = PURCHASE_CONFIRMED;
     }
 
-    public void cancel() {
+    public boolean cancel() {
+        if (this.status == CANCELED)
+            return false;
+
         if (this.status != ORDERED)
             throw new AppException(WRONG_STATUS_CHANGE, "주문완료 상태인 주문만 취소 가능합니다.");
+
         this.status = CANCELED;
+        return true;
     }
 }
