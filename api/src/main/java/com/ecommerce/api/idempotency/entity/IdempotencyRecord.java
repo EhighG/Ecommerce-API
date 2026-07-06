@@ -93,16 +93,4 @@ public class IdempotencyRecord extends BaseTimeEntity {
     public boolean isExpired(Instant now) {
         return !this.expiresAt.isAfter(now);
     }
-//
-//    public void succeed(IdempotencyResourceType resourceType, Long resourceId, Instant expiresAt) {
-//        if (!isProcessing()) {
-//            throw new IllegalStateException("잘못된 status 변경: "
-//                    + this.status + " -> " + IdempotencyStatus.SUCCEEDED);
-//        }
-//
-//        this.status = IdempotencyStatus.SUCCEEDED;
-//        this.resourceType = Objects.requireNonNull(resourceType);
-//        this.resourceId = Objects.requireNonNull(resourceId);
-//        this.expiresAt = Objects.requireNonNull(expiresAt);
-//    }
 }
