@@ -4,7 +4,7 @@ import com.ecommerce.api.auth.domain.CustomUserDetails;
 import com.ecommerce.api.order.dto.OrderDetailRes;
 import com.ecommerce.api.order.dto.OrderListRes;
 import com.ecommerce.api.order.dto.OrderReq;
-import com.ecommerce.api.order.service.OrderPlacementService;
+import com.ecommerce.api.order.service.IdempotentOrderPlacementService;
 import com.ecommerce.api.order.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +20,14 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderPlacementService orderPlacementService;
+    private final IdempotentOrderPlacementService idempotentOrderPlacementService;
 
     @PostMapping
-    public ResponseEntity<Long> order(@Valid @RequestBody OrderReq req,
+    public ResponseEntity<Long> order(@RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+                                      @Valid @RequestBody OrderReq req,
                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity
-                .ok(orderPlacementService.placeOrder(req, userDetails.getUserId()));
+                .ok(idempotentOrderPlacementService.placeOrder(req, userDetails.getUserId(), idempotencyKey));
     }
 
     @GetMapping("/me")

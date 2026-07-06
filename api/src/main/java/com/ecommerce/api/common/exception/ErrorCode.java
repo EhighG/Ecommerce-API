@@ -34,6 +34,7 @@ public enum ErrorCode {
     ORDER_ACCESS_DENIED(ORDER_NOT_FOUND.httpStatus, 3001, ORDER_NOT_FOUND.message),
     ORDER_ITEM_NOT_FOUND(NOT_FOUND, 3002, "OrderItem not found"),
     WRONG_STATUS_CHANGE(BAD_REQUEST, 3003, "해당 처리가 불가능한 주문입니다."),
+    ORDER_STATUS_CONFLICT(CONFLICT, 3004, "주문 상태가 변경되었습니다. 다시 시도해주세요."),
 
 //    // 4xxx: Payment
 //    PAYMENT_ALREADY_EXISTS(CONFLICT, 4001, "Payment already exists"),
@@ -76,6 +77,13 @@ public enum ErrorCode {
     NOT_SUPPORTED(INTERNAL_SERVER_ERROR, 9000, "Not supported Operation"),
     INVALID_INPUT(BAD_REQUEST, 9001, "Invalid input"),
     ORDER_QUANTITY_MUST_PLUS(BAD_REQUEST, 9002, "Quantity must be greater than 0"),
+
+    // 91xx: Idempotency
+    IDEMPOTENCY_KEY_REQUIRED(BAD_REQUEST, 9100, "Idempotency-Key 헤더가 없습니다."),
+    IDEMPOTENCY_KEY_INVALID(BAD_REQUEST, 9101, "Invalid Idempotency-Key"),
+    IDEMPOTENCY_KEY_CONFLICT(CONFLICT, 9102, "중복된 Idempotency-Key입니다."),
+    IDEMPOTENCY_REQUEST_PROCESSING(CONFLICT, 9103, "동일한 요청이 이미 처리중입니다."),
+
 
 
     // 9999: 미식별
