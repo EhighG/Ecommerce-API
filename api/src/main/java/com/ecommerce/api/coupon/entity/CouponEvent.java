@@ -78,28 +78,28 @@ public class CouponEvent extends BaseTimeEntity {
             long validSeconds
     ) {
         if (name == null || name.isBlank()) {
-            throw new AppException(INVALID_INPUT, "Coupon event name is required");
+            throw new AppException(INVALID_INPUT, "쿠폰 이벤트 이름은 필수입니다.");
         }
         if (type == null) {
-            throw new AppException(INVALID_INPUT, "Coupon type is required");
+            throw new AppException(INVALID_INPUT, "쿠폰 종류는 필수입니다.");
         }
         if (discountValue <= 0) {
-            throw new AppException(INVALID_INPUT, "Coupon discount value must be positive");
+            throw new AppException(INVALID_INPUT, "쿠폰 할인값은 1 이상이어야 합니다.");
         }
         if (CouponType.PERCENT.equals(type) && discountValue > 100) {
-            throw new AppException(INVALID_INPUT, "Percent coupon discount rate must be between 1 and 100");
+            throw new AppException(INVALID_INPUT, "정률 쿠폰 할인율은 1 이상 100 이하이어야 합니다.");
         }
         if (maxDiscountAmount <= 0) {
-            throw new AppException(INVALID_INPUT, "Max discount amount must be positive");
+            throw new AppException(INVALID_INPUT, "최대 할인 금액은 1원 이상이어야 합니다.");
         }
         if (initialQuantity <= 0) {
-            throw new AppException(INVALID_INPUT, "Initial quantity must be positive");
+            throw new AppException(INVALID_INPUT, "발급 가능 수량은 1개 이상이어야 합니다.");
         }
         if (startAt == null || endAt == null || !startAt.isBefore(endAt)) {
-            throw new AppException(INVALID_INPUT, "Invalid coupon event period");
+            throw new AppException(INVALID_INPUT, "쿠폰 이벤트 기간이 올바르지 않습니다.");
         }
         if (validSeconds <= 0) {
-            throw new AppException(INVALID_INPUT, "Valid seconds must be positive");
+            throw new AppException(INVALID_INPUT, "쿠폰 유효 기간은 1초 이상이어야 합니다.");
         }
     }
 

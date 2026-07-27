@@ -52,9 +52,9 @@ public class Order extends BaseTimeEntity {
 
     private void validateOrder(List<OrderLine> orderLineList, User buyer) {
         if (orderLineList == null || orderLineList.isEmpty())
-            throw new AppException(ErrorCode.INVALID_INPUT, "Order line list is empty");
+            throw new AppException(ErrorCode.INVALID_INPUT, "주문 항목이 비어 있습니다.");
         if (buyer == null)
-            throw new AppException(ErrorCode.INVALID_INPUT, "Buyer is null");
+            throw new AppException(ErrorCode.INVALID_INPUT, "주문자 정보가 없습니다.");
     }
 
     private void addItem(OrderItem orderItem) {
