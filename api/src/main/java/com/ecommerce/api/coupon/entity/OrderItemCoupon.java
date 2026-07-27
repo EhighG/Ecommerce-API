@@ -39,10 +39,10 @@ public class OrderItemCoupon extends BaseTimeEntity {
 
     public OrderItemCoupon(OrderItem orderItem, CouponIssued couponIssued, long discountedAmount, Instant usedAt) {
         if (orderItem == null || couponIssued == null || usedAt == null) {
-            throw new AppException(INVALID_INPUT, "Invalid order item coupon");
+            throw new AppException(INVALID_INPUT, "주문 항목과 쿠폰 정보가 올바르지 않습니다.");
         }
         if (discountedAmount <= 0) {
-            throw new AppException(INVALID_INPUT, "Discount amount must be positive");
+            throw new AppException(INVALID_INPUT, "할인 금액은 1원 이상이어야 합니다.");
         }
 
         this.orderItem = orderItem;

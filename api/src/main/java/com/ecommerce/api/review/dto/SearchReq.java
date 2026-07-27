@@ -15,7 +15,7 @@ public record SearchReq(
     public SearchReq {
         if ((searchBy == SearchBy.PRODUCT && productId == null) ||
                 (searchBy == SearchBy.WRITER && writerId == null)) {
-            throw new AppException(ErrorCode.INVALID_INPUT, "Exactly one of Product Id or Writer Id is required");
+            throw new AppException(ErrorCode.INVALID_INPUT, "검색 기준에 맞는 상품 식별자 또는 작성자 식별자가 필요합니다.");
         }
 
         if (page == null) page = 0;

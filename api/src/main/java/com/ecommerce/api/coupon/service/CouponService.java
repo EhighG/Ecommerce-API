@@ -173,7 +173,7 @@ public class CouponService {
         if (startAt.isBefore(endAt) && endAt.isAfter(now)) {
             return;
         }
-        throw new AppException(INVALID_INPUT, "Invalid coupon event period.");
+        throw new AppException(INVALID_INPUT, "쿠폰 이벤트 기간이 올바르지 않습니다.");
     }
 
     private Instant toInstant(String dateTimeString, String timezone) {
@@ -183,7 +183,7 @@ public class CouponService {
             LocalDateTime dateTime = LocalDateTime.parse(dateTimeString, COUPON_EVENT_DATE_TIME_FORMATTER);
             return dateTime.atZone(zoneId).toInstant();
         } catch (DateTimeParseException e) {
-            throw new AppException(INVALID_INPUT, "Invalid coupon event datetime.");
+            throw new AppException(INVALID_INPUT, "쿠폰 이벤트 일시 형식이 올바르지 않습니다.");
         }
     }
 
@@ -195,7 +195,7 @@ public class CouponService {
         try {
             return ZoneId.of(timezone);
         } catch (DateTimeException e) {
-            throw new AppException(INVALID_INPUT, "Invalid time zone.");
+            throw new AppException(INVALID_INPUT, "시간대 형식이 올바르지 않습니다.");
         }
     }
 }

@@ -24,7 +24,7 @@ public class Rating {
 
     public Rating(int halfStars) {
         if (halfStars < 0 || halfStars > 10)
-            throw new AppException(ErrorCode.INVALID_INPUT, "rating must be between 0 and 10");
+            throw new AppException(ErrorCode.INVALID_INPUT, "별점은 0점 이상 5점 이하로 입력해야 합니다.");
         this.halfStars = halfStars;
     }
 

@@ -99,7 +99,7 @@ public class CouponEventCacheService {
     public int getRemainingQuantity(Long couponEventId) {
         String stock = redisTemplate.opsForValue().get(stockKey(couponEventId));
         if (stock == null || stock.isBlank()) {
-            throw new AppException(COUPON_EVENT_READ_FAILED, "쿠폰 잔여수량 조회 실패");
+            throw new AppException(COUPON_EVENT_READ_FAILED, "쿠폰 잔여 수량을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
         }
 
         return Math.toIntExact(Long.parseLong(stock));
@@ -160,7 +160,7 @@ public class CouponEventCacheService {
 
             return Long.valueOf(1L).equals(result);
         } catch (JacksonException e) {
-            throw new AppException(COUPON_EVENT_CACHING_FAILED, "Coupon event cache serialize failed.");
+            throw new AppException(COUPON_EVENT_CACHING_FAILED, "쿠폰 이벤트 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
         }
     }
 

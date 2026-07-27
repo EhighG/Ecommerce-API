@@ -55,6 +55,6 @@ public class Inventory extends BaseTimeEntity {
 
     private void validate(int quantity) {
         if (quantity < 0)
-            throw new AppException(ErrorCode.INVALID_INPUT, "quantity must be same or greater than 0");
+            throw new AppException(ErrorCode.INVALID_INPUT, "재고 수량은 0개 이상이어야 합니다.");
     }
 }

@@ -57,20 +57,20 @@ public class OrderItem {
 
     public void startDelivery() {
         if (this.status != ORDERED)
-            throw new AppException(WRONG_STATUS_CHANGE, "wrong orderStatus change. (" + this.status + " -> " + SHIPPED + ")");
+            throw new AppException(WRONG_STATUS_CHANGE, "주문완료 상태의 주문만 배송 시작할 수 있습니다.");
         this.status = SHIPPED;
     }
 
     public void delivered() {
         if (this.status != SHIPPED)
-            throw new AppException(WRONG_STATUS_CHANGE, "wrong orderStatus change. (" + this.status + " -> " + DELIVERED + ")");
+            throw new AppException(WRONG_STATUS_CHANGE, "배송중 상태의 주문만 배송 완료할 수 있습니다.");
         this.status = DELIVERED;
         this.deliveredAt = Instant.now();
     }
 
     public void confirm() {
         if (this.status != DELIVERED)
-            throw new AppException(WRONG_STATUS_CHANGE, "wrong orderStatus change. (" + this.status + " -> " + PURCHASE_CONFIRMED + ")");
+            throw new AppException(WRONG_STATUS_CHANGE, "배송완료 상태의 주문만 구매 확정할 수 있습니다.");
         this.status = PURCHASE_CONFIRMED;
     }
 
@@ -79,7 +79,7 @@ public class OrderItem {
             return false;
 
         if (this.status != ORDERED)
-            throw new AppException(WRONG_STATUS_CHANGE, "주문완료 상태인 주문만 취소 가능합니다.");
+            throw new AppException(WRONG_STATUS_CHANGE, "주문완료 상태의 주문만 취소할 수 있습니다.");
 
         this.status = CANCELED;
         return true;
