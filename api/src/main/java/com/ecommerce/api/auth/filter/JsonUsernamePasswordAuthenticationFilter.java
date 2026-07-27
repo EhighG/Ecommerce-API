@@ -6,11 +6,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.util.StringUtils;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -28,13 +30,15 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
     @Override
     public @Nullable Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
             throws AuthenticationException {
-        // Content-Type 제약 필요할지?
         LoginReq loginReq;
-
         try {
             loginReq = objectMapper.readValue(request.getInputStream(), LoginReq.class);
         } catch (IOException | JacksonException e) {
             throw new AuthenticationServiceException("로그인 요청 body 파싱 실패", e);
+        }
+
+        if (!StringUtils.hasText(loginReq.email()) || !StringUtils.hasText(loginReq.password())) {
+            throw new BadCredentialsException("ID, 비밀번호는 필수입니다.");
         }
 
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(

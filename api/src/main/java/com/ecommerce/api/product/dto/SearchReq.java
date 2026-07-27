@@ -9,8 +9,8 @@ public record SearchReq(
         String keyword,
         Long categoryId,
         Long sellerId,
-        @Min(0) Integer page,
-        @Min(1) Integer size,
+        @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
+        @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") Integer size,
         SortType sortBy,
         SortDirection direction
 ) {

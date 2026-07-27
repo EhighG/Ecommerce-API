@@ -84,7 +84,7 @@ public class CouponEvent extends BaseTimeEntity {
             throw new AppException(INVALID_INPUT, "쿠폰 종류는 필수입니다.");
         }
         if (discountValue <= 0) {
-            throw new AppException(INVALID_INPUT, "쿠폰 할인 값은 1 이상이어야 합니다.");
+            throw new AppException(INVALID_INPUT, "쿠폰 할인값은 1 이상이어야 합니다.");
         }
         if (CouponType.PERCENT.equals(type) && discountValue > 100) {
             throw new AppException(INVALID_INPUT, "정률 쿠폰 할인율은 1 이상 100 이하이어야 합니다.");

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
  * '장바구니에 담기' 동작을 위해 cartItemId가 아닌 productId를 받음
  */
 public record ChangeQuantityReq(
-        @NotNull Long productId,
-        @NotNull @Min(1) Integer quantity
+        @NotNull(message = "상품 ID는 필수입니다.") Long productId,
+        @NotNull(message = "수량은 필수입니다.") @Min(value = 1, message = "수량은 1개 이상이어야 합니다.") Integer quantity
 ) {
 }
