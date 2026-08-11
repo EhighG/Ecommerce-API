@@ -35,7 +35,7 @@ public class CartItemService {
         User buyer = userService.getUserNotDeleted(userId);
         Product product = productService.getProduct(req.productId());
 
-        CartItem cartItem = cartItemRepository.findByUserIdAndProductId(userId, product.getId())
+        CartItem cartItem = cartItemRepository.findByUserIdAndProductId(userId, req.productId())
                 .orElse(null);
 
         if (cartItem != null) {
