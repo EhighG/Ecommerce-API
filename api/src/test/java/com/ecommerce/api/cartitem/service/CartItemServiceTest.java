@@ -20,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
@@ -63,7 +64,7 @@ class CartItemServiceTest {
         when(userService.getUserNotDeleted(userId)).thenReturn(buyer);
         when(productService.getProduct(productId)).thenReturn(product);
         when(cartItemRepository.findByUserIdAndProductId(userId, productId)).thenReturn(Optional.empty());
-        when(cartItemRepository.save(any(CartItem.class))).thenReturn(
+        when(cartItemRepository.saveAndFlush(any(CartItem.class))).thenReturn(
                 cartItemWithId(savedCartItemId, quantity)
         );
 
@@ -74,7 +75,7 @@ class CartItemServiceTest {
         assertThat(result).isEqualTo(savedCartItemId);
 
         ArgumentCaptor<CartItem> captor = ArgumentCaptor.forClass(CartItem.class);
-        verify(cartItemRepository).save(captor.capture());
+        verify(cartItemRepository).saveAndFlush(captor.capture());
 
         CartItem savedCartItem = captor.getValue();
         assertThat(savedCartItem.getUser()).isSameAs(buyer);
@@ -107,7 +108,7 @@ class CartItemServiceTest {
         assertThat(result).isEqualTo(existingItem.getId());
 
         assertThat(existingItem.getQuantity()).isEqualTo(oldQuantity + quantity);
-        verify(cartItemRepository, never()).save(any());
+        verify(cartItemRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -125,7 +126,7 @@ class CartItemServiceTest {
         assertThatThrownBy(() -> cartItemService.addItem(req, userId))
                 .isSameAs(userNotFound);
 
-        verify(cartItemRepository, never()).save(any(CartItem.class));
+        verify(cartItemRepository, never()).saveAndFlush(any(CartItem.class));
     }
 
     @Test
@@ -144,7 +145,29 @@ class CartItemServiceTest {
         assertThatThrownBy(() -> cartItemService.addItem(req, userId))
                 .isSameAs(productNotFound);
 
-        verify(cartItemRepository, never()).save(any(CartItem.class));
+        verify(cartItemRepository, never()).saveAndFlush(any(CartItem.class));
+    }
+
+    @Test
+    void addItem_whenDuplicateCartItemConflictOccurs_throwsCartItemConflict() {
+        // given
+        Long userId = 1L;
+        Long productId = 10L;
+        int quantity = 1;
+        AddItemReq req = new AddItemReq(productId, quantity);
+
+        when(userService.getUserNotDeleted(userId)).thenReturn(buyer());
+        when(productService.getProduct(productId)).thenReturn(product());
+        when(cartItemRepository.findByUserIdAndProductId(userId, productId))
+                .thenReturn(Optional.empty());
+        when(cartItemRepository.saveAndFlush(any(CartItem.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate cart item"));
+
+        // when & then
+        assertThatExceptionOfType(AppException.class)
+                .isThrownBy(() -> cartItemService.addItem(req, userId))
+                .extracting(AppException::getErrorCode)
+                .isEqualTo(ErrorCode.CART_ITEM_CONFLICT);
     }
 
     @Test

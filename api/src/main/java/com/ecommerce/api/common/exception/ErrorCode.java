@@ -44,6 +44,7 @@ public enum ErrorCode {
 
     // 7xxx: CartItem
     CART_ITEM_NOT_FOUND(NOT_FOUND, "7000", "장바구니 항목을 찾을 수 없습니다."),
+    CART_ITEM_CONFLICT(CONFLICT, "7001", "장바구니 항목이 이미 변경되었습니다. 잠시 후 다시 시도해주세요."),
 
     // 75xx: Coupon
     COUPON_EVENT_NOT_FOUND(NOT_FOUND, "7500", "쿠폰 이벤트를 찾을 수 없습니다."),

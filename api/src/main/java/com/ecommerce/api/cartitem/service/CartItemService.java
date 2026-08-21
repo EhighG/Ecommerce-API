@@ -15,6 +15,7 @@ import com.ecommerce.api.product.service.ProductService;
 import com.ecommerce.api.user.entity.User;
 import com.ecommerce.api.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,11 +44,15 @@ public class CartItemService {
             return cartItem.getId();
         }
 
-        CartItem saved = cartItemRepository.save(
-                new CartItem(buyer, product, req.quantity())
-        );
+        try {
+            CartItem saved = cartItemRepository.saveAndFlush(
+                    new CartItem(buyer, product, req.quantity())
+            );
 
-        return saved.getId();
+            return saved.getId();
+        } catch (DataIntegrityViolationException e) {
+            throw new AppException(ErrorCode.CART_ITEM_CONFLICT);
+        }
     }
 
     public List<CartItemListRes> findCartItems(Long userId) {
