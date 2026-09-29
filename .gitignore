@@ -34,5 +34,3 @@ ignore/
 k6/data/
 **/.env
 .omo/
-# dryforge
-.dryforge/
