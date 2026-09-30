@@ -24,6 +24,7 @@
   - 비밀값이 빈 문자열이면 기동이 실패한다(`validate()`의 `isBlank`).
   - 하지만 `LOADTEST_AUTH_SECRET`을 아예 설정하지 않으면 비밀값은 문자 그대로의 `${LOADTEST_AUTH_SECRET}`가 되어 검사를 통과한다. 검사를 보강하려면 `${`로 시작하는 값도 거절한다.
   - CSRF 예외는 `X-LoadTest-User-Id` 헤더가 있는 요청에만 적용되고, 필터 빈이 있을 때만 설정된다.
+  - 헤더가 있으면 세션으로 이미 인증된 요청이어도 비밀값부터 검사한다. 현재는 세션 인증이 있으면 비밀값을 보지 않고 통과시켜, CSRF 검사만 빠진 채 세션 사용자로 처리된다.
 - 인증 실패와 권한 부족에는 애플리케이션 오류 형식(`code` 필드)의 본문이 없다.
   - 401(`HttpStatusEntryPoint`)은 본문이 비어 있다.
   - 403과 부하테스트 필터의 401(`sendError`)은 `/error`로 넘어가서 Spring Boot 기본 오류 JSON(`timestamp`, `status`, `error`, `path`)이 나간다.
@@ -35,11 +36,12 @@
 - 로그인 필터는 폼 로그인을 끄고 `addFilterAt(…, UsernamePasswordAuthenticationFilter.class)`로 넣었다. 성공하면 `HttpSessionSecurityContextRepository`로 세션에 저장한다.
   - 이렇게 직접 등록한 필터에는 폼 로그인에 기본으로 붙는 세션 전략(세션 ID 교체, CSRF 토큰 교체)이 적용되지 않는다. 필터 기본값이 `NullAuthenticatedSessionStrategy`이기 때문이다.
   - 세션 고정 보호가 필요하면 필터에 세션 전략을 직접 설정해야 한다.
-- 세션의 사용자 정보는 로그인 시점 값이다. 탈퇴나 비밀번호 변경은 요청한 세션만 무효화한다.
+- 세션의 사용자 정보는 로그인 시점 값이다. 탈퇴나 비밀번호 변경은 그 사용자의 모든 세션을 무효화해야 한다(`docs/security.md`). 현재는 요청한 세션만 무효화한다.
 - 세션 쿠키 이름은 Spring Session 기본값인 `SESSION`이다. 로그아웃 설정의 `deleteCookies("JSESSIONID")`는 아무것도 지우지 않는다. 쿠키 만료는 Spring Session이 세션 무효화 때 처리한다.
 - CORS는 `WebConfig`의 `http://localhost:3000`(쿠키 포함)을 `.cors(withDefaults())`로 쓴다.
 
-## 테스트 기준(현재 없음)
+## 테스트 기준
+이 패키지를 바꾸면 아래를 테스트한다.
 - 역할 매트릭스: 각 matcher 그룹의 대표 경로를 비로그인(401), 다른 역할(403), 맞는 역할로 호출한다.
 - CSRF 없이 POST하면 403이다.
 - 로그인: 성공 200, 틀린 비밀번호·탈퇴 사용자·빈 값·JSON이 아닌 본문은 401.

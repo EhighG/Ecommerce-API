@@ -3,7 +3,8 @@
 ## 담당 범위
 - REST API 서버 전체다. 도메인 패키지는 `src/main/java/com/ecommerce/api/`의 auth, user, product, inventory, media, cartitem, order, coupon, review, idempotency, common이다.
 - 프로필 설정(`src/main/resources/application*.yaml`), 배포 이미지(`Dockerfile`), 테스트(`src/test`)도 여기에 있다.
-- 담당하지 않는 것: 부하테스트 스크립트(`../k6`), 부하 발생기 자동화(`../infra`), CI 워크플로(`../.github`), 로컬 전용 파일(`compose.yaml`, `infra/gcp` 키, `application-secret.yaml`). 로컬 전용 파일은 커밋하지 않으며, 수정·생성은 사용자가 요청할 때만 한다.
+- 현재 스키마 전체 DDL(`db/schema.sql`)과 로컬 수평 확장 예시(`infra/scaleout-local/`, `.env` 제외)도 여기에 있다.
+- 담당하지 않는 것: 부하테스트 스크립트(`../k6`), 부하 발생기 자동화(`../infra`), 배포 워크플로(`../.github`), 로컬 전용 파일(`compose.yaml`, `infra/gcp` 키, `application-secret.yaml`, `.env`). 로컬 전용 파일은 커밋하지 않으며, 수정·생성은 사용자가 요청할 때만 한다.
 
 ## 항상 지켜야 할 것
 - `./gradlew test`가 통과해야 한다. Docker가 필요하고, `reproduction` 태그는 제외된다.
@@ -19,9 +20,7 @@
   3. 서비스에서 소유자와 상태를 검사하고 엔티티 메서드를 호출한다.
   4. 응답 DTO(record)로 변환한다.
 - 업무 오류는 `throw new AppException(ErrorCode.X[, "구체적 한국어 메시지"])`로 던진다. 전역 핸들러가 `{code, message}`로 바꾼다.
-- 요청 record의 compact constructor에서 기본값을 채운다.
-  - 교차 검증을 여기서 던지면 현재는 전용 코드로 응답되지 않는다. `@RequestBody`는 `9001 "요청 Body 읽기 실패"`, `@ModelAttribute`는 500이 된다.
-  - 새 교차 검증은 서비스에서 한다.
+- 요청 record는 compact constructor에서 기본값만 채우고, 필드 사이 조건은 `@AssertTrue` 메서드로 검사한다(`docs/standards.md`의 "입출력 계약 패턴").
 - 목록 조회는 fetch join 또는 DTO projection(JPQL `new …`, Querydsl `Projections.constructor`)으로 한다. 목록마다 N+1이 생기지 않게 한다.
 - 썸네일이나 이미지 URL은 저장된 object key를 `MediaService.resolveUrl`로 바꿔서 만든다. URL을 DB에 저장하지 않는다.
 

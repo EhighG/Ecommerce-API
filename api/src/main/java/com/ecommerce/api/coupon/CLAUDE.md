@@ -10,7 +10,7 @@
   - 주문 흐름에서 언제 쿠폰을 쓰고 복구하는지(order 패키지가 호출)
   - 주문항목 상태
   - 사용자 조회 규칙
-- 여기에 없는 기능: 내 쿠폰 목록 조회, 이벤트 비활성화·수정, 만료 일괄 전환(만들지 않기로 결정함).
+- 요구사항이지만 아직 없는 기능: 쿠폰 이벤트 목록, 내 쿠폰 목록, 이벤트 수정·비활성화, 최대 할인액을 정률 쿠폰에만 받기(`docs/business-rules.md`의 "쿠폰"). 만료 일괄 전환은 만들지 않는다(결정 기록 0005).
 
 ## 항상 지켜야 할 것
 - **사용 가능 판정은 `status == ISSUED && now < expiresAt`**(`CouponIssued.isUsable`) 하나뿐이다.
@@ -28,10 +28,12 @@
   1. Redis 캐시가 있는지와 열림 여부를 확인한다. 캐시가 없으면 `COUPON_EVENT_CLOSED`다.
   2. Lua `issueScript`를 실행한다. 이미 발급자 집합에 있으면 −1, 재고가 0 이하이면 −2, 통과하면 `DECR` + `SADD`.
   3. DB에 `saveAndFlush`한다.
-  4. DB에서 **어떤 예외가 나든** `compensateScript`로 Redis를 되돌린다. 유니크 위반이면 `COUPON_ALREADY_ISSUED`로 바꾼다.
+  4. DB 저장에서 **어떤 예외가 나든** `compensateScript`로 Redis를 되돌린다. 커밋 단계의 실패와 보상 호출 자체의 실패는 되돌리지 못해 수량이 1 줄어든 채 남는다.
+  5. 유니크 제약(`uk_coupon_issued_event_user`) 위반일 때만 `COUPON_ALREADY_ISSUED`로 바꾼다. 현재는 `DataIntegrityViolationException` 전체를 이 코드로 바꾼다(`docs/tracking/findings/coupon.md`).
   
   보상 없이 예외를 삼키거나, 예외 경로를 새로 추가하면서 보상을 빠뜨리면 수량이 샌다.
-- 캐시 초기화(`initEventScript`)는 meta 키가 **없을 때만** 한다. 수량은 `초기 수량 − DB 발급 건수`로 넣고, 발급자 집합은 비운다. 중복 발급은 DB 유니크 `(coupon_event_id, user_id)`가 최종으로 막는다. 이 제약을 지우면 Redis 재적재 후 중복 발급이 가능해진다.
+- 캐시 초기화(`initEventScript`)는 meta 키가 **없을 때만** 한다. 수량은 `초기 수량 − DB 발급 건수`로 넣고, 발급자 집합은 비운다. 1인 1장은 DB 유니크 `(coupon_event_id, user_id)`가 최종으로 막는다. 이 제약을 지우면 Redis 재적재 후 중복 발급이 가능해진다.
+- 수량 한도는 Redis만 판정한다. DB에는 수량 상한 검사가 없어서, Redis가 과거 상태로 되살아나면(meta 키가 남아 재적재되지 않음) 초과 발급될 수 있다(`docs/tracking/findings/coupon.md`).
 - `UsedCouponSnapshot`은 사용 시점의 이벤트 이름, 방식, 값, 최대 할인액, 실제 할인액을 복사한다. 조회 응답은 원본 이벤트가 아니라 스냅샷을 쓴다.
 
 ## 알아둘 구현 방식
@@ -45,7 +47,8 @@
 - 이벤트 시각 입력은 `yyyy-MM-dd HH:mm:ss` + `ZoneId`(기본 `Asia/Seoul`)를 `Instant`로 바꾼다.
 
 ## 테스트 기준
+이 패키지를 바꾸면 아래를 테스트한다.
 - 할인 계산(정액, 정률 버림, 최대 할인액 상한, 금액 상한, 금액 0 거절)은 단위 테스트로 한다.
 - `use` / `restore`: 만료 전 복구 → `ISSUED`, 만료 후 복구 → `EXPIRED`, `USED`가 아닌 쿠폰 복구 → `INVALID_COUPON_STATUS`.
 - 발급은 Redis 스크립트와 DB 보상이 얽혀 있다. 통합 테스트에 Redis(Testcontainers)를 추가해야 제대로 검증할 수 있다. 현재 통합 설정은 캐시 서비스를 mock으로 둔다.
-- 경계 사례: 수량 1개에 동시 요청 N개면 1명만 성공해야 한다. Redis 재적재 직후 기존 발급자가 요청하면 `7506`이고 수량은 그대로여야 한다.
+- 경계 사례: 수량 1개에 동시 요청 N개면 1명만 성공해야 한다. Redis 재적재 직후 기존 발급자가 요청하면 `7506`(남은 수량이 0이면 `7507`)이고 수량은 그대로여야 한다.
