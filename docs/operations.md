@@ -67,8 +67,8 @@
 | `GCS_UPLOAD_PREFIX` | 업로드 객체 경로 접두어(예: `product_images`). 빈 문자열이면 날짜 폴더부터 시작한다. 변수를 아예 설정하지 않으면 문자 그대로의 `${GCS_UPLOAD_PREFIX}`가 접두어가 된다 | 전체 |
 | `GOOGLE_APPLICATION_CREDENTIALS` | 서비스 계정 키 파일 경로(**OS 환경변수**). VM 서비스 계정을 쓰면 생략한다. 이때 서명 URL은 IAM `signBlob` API로 만들어지므로, 그 서비스 계정에 자기 자신에 대한 토큰 생성자 권한(`roles/iam.serviceAccountTokenCreator`)이 있고 IAM Service Account Credentials API가 켜져 있어야 한다(라이브러리 동작 기준, 확인 필요) | 전체 |
 | `HIKARI_MAX_POOL_SIZE`, `HIKARI_MIN_IDLE`, `HIKARI_CONN_TIMEOUT_MS` | 커넥션 풀. 기본값은 10 / 10 / 30000ms | 전체 |
-| `PRODUCT_VIEW_COUNT_FLUSH_BATCH_SIZE` | 조회수 반영 1회에 처리할 상품 수(1 이상, 기본값 없음) | 전체 |
-| `PRODUCT_VIEW_COUNT_FLUSH_MAX_BATCHES_PER_RUN` | 30초 주기 1회당 최대 청크 수(1 이상, 기본값 없음) | 전체 |
+| `PRODUCT_VIEW_COUNT_FLUSH_BATCH_SIZE` | 조회수 반영 1회에 처리할 상품 수(1 이상, 기본값 100) | 전체 |
+| `PRODUCT_VIEW_COUNT_FLUSH_MAX_BATCHES_PER_RUN` | 30초 주기 1회당 최대 청크 수(1 이상, 기본값 10) | 전체 |
 | `LOADTEST_AUTH_ENABLED`, `LOADTEST_AUTH_SECRET` | 헤더 기반 인증 우회. 켤 때는 비밀값을 반드시 명시적으로 설정한다. 설정하지 않으면 문자 그대로의 `${LOADTEST_AUTH_SECRET}`가 비밀값이 되어 기동 검사를 통과한다. **실사용 환경 금지** | `loadtest` |
 | `HIBERNATE_SLOW_QUERY_MS` | 느린 쿼리 로그 기준(기본 1000) | `loadtest` |
 
@@ -93,7 +93,7 @@
 
 전제: Artifact Registry 저장소(`asia-northeast3`), 인스턴스 템플릿과 Managed Instance Group(인스턴스마다 이미지 `:latest`를 실행하고 위 환경변수를 주입), MySQL, Redis, GCS 버킷(공개 읽기), GitHub 저장소 변수가 준비돼 있어야 한다.
 
-- GitHub 저장소 변수: `GCP_PROJECT_ID`, `GCP_REGION`, `GCE_INSTANCE_NAME`, `GCE_ZONE`, `ARTIFACT_REPOSITORY`, `API_SERVER_IMAGE_NAME`, `MIG_NAME`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_GITHUB_ACTIONS_SERVICE_ACCOUNT`
+- GitHub 저장소 변수: `GCP_PROJECT_ID`, `GCE_ZONE`, `ARTIFACT_REPOSITORY`, `API_SERVER_IMAGE_NAME`, `MIG_NAME`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_GITHUB_ACTIONS_SERVICE_ACCOUNT`
 
 순서:
 1. DB 스키마 변경이 있으면 **먼저** 클라우드 MySQL에 DDL을 적용한다. 새 이미지는 `validate`에 실패하면 기동하지 않는다.

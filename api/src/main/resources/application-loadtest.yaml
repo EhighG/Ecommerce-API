@@ -29,7 +29,6 @@ spring:
 
   # store session in redis
   session:
-    store-type: redis
     timeout: 30m
     data:
       redis:
