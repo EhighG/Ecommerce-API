@@ -8,37 +8,23 @@ const BASE_URL = env("BASE_URL");
 
 if (!BASE_URL) {
   throw new Error(
-    "BASE_URL is required. Example: BASE_URL=http://host/api k6 run k6/measure-product-search.js",
+    "BASE_URL is required. Example: BASE_URL=http://host/api k6 run k6/product_search/measure-product-search.js",
   );
 }
 
 const PRODUCT_SEARCH_SIZE = Number(__ENV.PRODUCT_SEARCH_SIZE || 50);
 
-// const searchRate = Number(__ENV.SEARCH_RATE || 3);
-// const duration = __ENV.DURATION || "3m";
-// const preAllocatedVUs = Number(__ENV.PRE_ALLOCATED_VUS || 20);
-// const maxVUs = Number(__ENV.MAX_VUS || 100);
-// const p95Ms = 1000;
-// const p99Ms = 2000;
-
-// // 성능 측정용
-// const searchRate = 10;
-// const duration = "3m";
-// const preAllocatedVUs = 20;
-// const maxVUs = 100;
-// const p95Ms = 300;
-// const p99Ms = 800;
-
-// 병목 탐색용
-const searchRate = 30;
-const duration = "5m";
-const preAllocatedVUs = 50;
-const maxVUs = 200;
-const p95Ms = 300;
-const p99Ms = 800;
+// 부하 설정은 환경변수로 바꾼다. 기본값은 병목 탐색용이다.
+// 성능 측정용 예: SEARCH_RATE=10 DURATION=3m PRE_ALLOCATED_VUS=20 MAX_VUS=100
+const searchRate = Number(__ENV.SEARCH_RATE || 30);
+const duration = __ENV.DURATION || "5m";
+const preAllocatedVUs = Number(__ENV.PRE_ALLOCATED_VUS || 50);
+const maxVUs = Number(__ENV.MAX_VUS || 200);
+const p95Ms = Number(__ENV.SEARCH_P95_MS || 300);
+const p99Ms = Number(__ENV.SEARCH_P99_MS || 800);
 
 const productKeywords = new SharedArray("product search keywords", function () {
-  return JSON.parse(open("./data/product_name_keywords.json"))
+  return JSON.parse(open("../data/product_name_keywords.json"))
     .map((row) => row.keyword)
     .filter((keyword) => typeof keyword === "string" && keyword.length > 0);
 });

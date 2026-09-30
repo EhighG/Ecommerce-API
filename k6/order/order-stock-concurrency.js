@@ -11,18 +11,19 @@ import {
   readApiError,
 } from "../lib/auth.js";
 import { env, passwordOrEnv } from "../lib/env.js";
+import { newIdempotencyKey } from "../lib/idempotency.js";
 
 const BASE_URL = env("BASE_URL");
 
 if (!BASE_URL) {
   throw new Error(
-    "BASE_URL is required. Example: BASE_URL=http://host/api k6 run k6/order-stock-concurrency.js",
+    "BASE_URL is required. Example: BASE_URL=http://host/api k6 run k6/order/order-stock-concurrency.js",
   );
 }
 
 const ORDER_CANDIDATES_FILE =
   __ENV.ORDER_CANDIDATES_FILE ||
-  "./data/order_stock_concurrency_candidates.csv";
+  "../data/order_stock_concurrency_candidates.csv";
 
 // Concurrency profiles. Keep one profile active by env vars, or uncomment the
 // matching constants below and comment out the env-driven constants.
@@ -127,7 +128,7 @@ function isExpectedStockRejection(res) {
 
   const apiError = readApiError(res);
 
-  return apiError?.code === 2501;
+  return apiError?.code === "2501"; // INSUFFICIENT_INVENTORY. 서버 오류 code는 문자열이다
 }
 
 export default function () {
@@ -158,12 +159,16 @@ export default function () {
   }
 
   const orderReq = buildOrderReq(candidate);
+  // CSRF 재시도가 일어나도 같은 주문이므로 같은 키를 쓴다
   const orderRes = postJsonWithCsrfRetry(
     BASE_URL,
     "/orders",
     orderReq,
     csrfRef,
-    { tags: { name: "POST /orders" } },
+    {
+      headers: { "Idempotency-Key": newIdempotencyKey("stock") },
+      tags: { name: "POST /orders" },
+    },
   );
 
   if (orderRes.status === 200) {

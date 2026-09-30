@@ -6,6 +6,7 @@ import {
   getCsrf,
   login,
   logUnexpectedResponse,
+  readApiError,
   withCsrfHeaders,
 } from "./lib/auth.js";
 import { env } from "./lib/env.js";
@@ -54,6 +55,11 @@ export default function () {
     }),
     tags: { name: "POST /users" },
   });
+
+  // 이미 가입된 이메일(409 1001)은 건너뛴다. 스크립트를 다시 돌려도 실패하지 않게 하기 위해서다
+  if (joinRes.status === 409 && readApiError(joinRes)?.code === "1001") {
+    return;
+  }
 
   const joined = check(joinRes, {
     "join status is 200": (r) => r.status === 200,

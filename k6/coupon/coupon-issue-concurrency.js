@@ -15,7 +15,7 @@ const BASE_URL = env("BASE_URL");
 
 if (!BASE_URL) {
   throw new Error(
-    "BASE_URL is required. Example: BASE_URL=http://host/api k6 run k6/coupon-issue-concurrency.js",
+    "BASE_URL is required. Example: BASE_URL=http://host/api k6 run k6/coupon/coupon-issue-concurrency.js",
   );
 }
 
@@ -40,7 +40,8 @@ if (!Number.isInteger(COUPON_EVENT_ID) || COUPON_EVENT_ID <= 0) {
 // const maxDuration = "2m";
 //
 // Target sold-out correctness:
-// - Set coupon_event.initial_quantity to 100 before running.
+// - Create a new coupon event with initialQuantity 100 (POST /coupons/events) and wait until it is open.
+//   Changing initial_quantity of an existing event in the DB does not change its Redis stock once cached.
 // - Prepare at least 300 buyer rows in available_buyer_email.json.
 // - Expected: 100 success, 200 sold-out rejections.
 // const vus = 100;
@@ -63,8 +64,9 @@ const couponIssueUnexpectedFailure = new Counter(
   "coupon_issue_unexpected_failure",
 );
 
-const COUPON_ALREADY_ISSUED = 7506;
-const COUPON_SOLD_OUT = 7507;
+// 서버 오류 code는 4자리 문자열이다.
+const COUPON_ALREADY_ISSUED = "7506";
+const COUPON_SOLD_OUT = "7507";
 
 const buyers = new SharedArray("available buyer users", function () {
   return JSON.parse(open(BUYERS_FILE)).map((row) => ({

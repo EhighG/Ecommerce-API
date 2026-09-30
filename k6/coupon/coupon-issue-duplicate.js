@@ -14,7 +14,7 @@ const BASE_URL = env("BASE_URL");
 
 if (!BASE_URL) {
   throw new Error(
-    "BASE_URL is required. Example: BASE_URL=http://host/api k6 run k6/coupon-issue-duplicate.js",
+    "BASE_URL is required. Example: BASE_URL=http://host/api k6 run k6/coupon/coupon-issue-duplicate.js",
   );
 }
 
@@ -63,7 +63,8 @@ const couponDuplicateUnexpectedFailure = new Counter(
   "coupon_duplicate_unexpected_failure",
 );
 
-const COUPON_ALREADY_ISSUED = 7506;
+// 서버 오류 code는 4자리 문자열이다.
+const COUPON_ALREADY_ISSUED = "7506";
 
 const buyers = new SharedArray("available buyer users", function () {
   return JSON.parse(open(BUYERS_FILE)).map((row) => ({

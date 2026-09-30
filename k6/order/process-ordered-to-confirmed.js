@@ -14,7 +14,7 @@ import { env } from "../lib/env.js";
 const BASE_URL = env("BASE_URL");
 const USER_PASSWORD = env("PASSWORD");
 const PAGE_SIZE = Number(__ENV.PAGE_SIZE || 100);
-const WRONG_STATUS_CHANGE_CODE = 3003;
+const WRONG_STATUS_CHANGE_CODE = "3003"; // 서버 오류 code는 문자열이다
 
 function parseJson(res) {
   try {
@@ -264,7 +264,7 @@ function loginOrSkip(user, csrfRef, userType) {
 }
 
 const sellers = new SharedArray("available seller emails", function () {
-  return JSON.parse(open("./data/available_seller_email.json")).map((row) => ({
+  return JSON.parse(open("../data/available_seller_email.json")).map((row) => ({
     id: row.id,
     email: row.email,
     password: USER_PASSWORD,
@@ -272,7 +272,7 @@ const sellers = new SharedArray("available seller emails", function () {
 });
 
 const buyers = new SharedArray("available buyer emails", function () {
-  return JSON.parse(open("./data/available_buyer_email.json")).map((row) => ({
+  return JSON.parse(open("../data/available_buyer_email.json")).map((row) => ({
     id: row.id,
     email: row.email,
     password: USER_PASSWORD,

@@ -7,6 +7,7 @@ import {
   logout,
   logUnexpectedResponse,
   postJsonWithCsrfRetry,
+  readApiError,
 } from "./lib/auth.js";
 import { env } from "./lib/env.js";
 
@@ -196,6 +197,12 @@ export default function () {
         check(reviewRes, {
           "write review status is 200": (r) => r.status === 200,
         });
+        continue;
+      }
+
+      // 이미 쓴 리뷰(6002)와 삭제된 상품(2000)은 그 항목만 건너뛰고 다음 항목을 쓴다
+      const apiError = readApiError(reviewRes);
+      if (apiError && (apiError.code === "6002" || apiError.code === "2000")) {
         continue;
       }
 

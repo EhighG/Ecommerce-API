@@ -9,6 +9,7 @@ import {
   withCsrfHeaders,
 } from "../lib/auth.js";
 import { env } from "../lib/env.js";
+import { newIdempotencyKey } from "../lib/idempotency.js";
 
 const BASE_URL = env("BASE_URL");
 const BUYER_PASSWORD = env("PASSWORD");
@@ -62,7 +63,7 @@ function orderItemsMatchCartItems(orderItems, expectedItems) {
   }
 
   for (const orderItem of orderItems) {
-    const productId = orderItem.product?.productId;
+    const productId = orderItem.product?.id;
     const expectedQuantity = expectedByProductId.get(productId);
 
     if (
@@ -77,7 +78,7 @@ function orderItemsMatchCartItems(orderItems, expectedItems) {
 }
 
 const buyers = new SharedArray("available buyer emails", function () {
-  return JSON.parse(open("./data/available_buyer_email.json")).map((row) => ({
+  return JSON.parse(open("../data/available_buyer_email.json")).map((row) => ({
     email: row.email,
     password: BUYER_PASSWORD,
   }));
@@ -141,6 +142,7 @@ export default function () {
   const orderRes = http.post(`${BASE_URL}/orders`, JSON.stringify(orderReq), {
     headers: withCsrfHeaders(csrf, {
       "Content-Type": "application/json",
+      "Idempotency-Key": newIdempotencyKey("cart-order"),
     }),
     tags: { name: "POST /orders" },
   });
@@ -180,7 +182,9 @@ export default function () {
   const orderItemsRes = http.get(`${BASE_URL}/order-items?orderId=${orderId}`, {
     tags: { name: "GET /order-items" },
   });
-  const orderItems = parseJson(orderItemsRes);
+  // 구매자 주문항목 목록은 페이지 응답이다({ items, page, size, totalCount, ... })
+  const orderItemsPage = parseJson(orderItemsRes);
+  const orderItems = orderItemsPage && orderItemsPage.items;
   const orderItemsMatched = check(orderItemsRes, {
     "order item list status is 200": (r) => r.status === 200,
     "order items match selected cart items": () =>

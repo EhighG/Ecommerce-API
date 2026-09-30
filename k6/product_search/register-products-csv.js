@@ -71,7 +71,7 @@ function limitLength(value, maxLength) {
 }
 
 const products = new SharedArray('register csv products', function () {
-  const rows = parseCsv(open('./data/product_name_description_sample.csv'));
+  const rows = parseCsv(open('../data/product_name_description_sample.csv'));
   const header = rows[0] || [];
   const nameIndex = header.indexOf('name');
   const descriptionIndex = header.indexOf('description');
@@ -97,7 +97,7 @@ const products = new SharedArray('register csv products', function () {
 });
 
 const sellers = new SharedArray('seller login users', function () {
-  const rows = JSON.parse(open('./data/mock_nickname_email.json'));
+  const rows = JSON.parse(open('../data/mock_nickname_email.json'));
 
   if (rows.length < 71) {
     throw new Error('mock_nickname_email.json must contain at least 71 rows');

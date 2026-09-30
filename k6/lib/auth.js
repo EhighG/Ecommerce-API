@@ -9,10 +9,11 @@ function parseJson(res) {
   }
 }
 
+// 서버 오류 본문은 { code: "4자리 문자열", message }다. code가 없으면(401, CSRF 403 등) null을 돌려준다.
 export function readApiError(res) {
   const body = parseJson(res);
 
-  if (!body || typeof body.code !== 'number') {
+  if (!body || typeof body.code !== 'string') {
     return null;
   }
 
@@ -94,7 +95,8 @@ export function requestWithCsrfRetry(method, baseUrl, path, body, csrfRef, optio
 
   let res = http.request(method, `${baseUrl}${path}`, requestBody, params);
 
-  if (res.status !== 403) {
+  // CSRF 실패는 code가 없는 403이다. code가 있는 403은 업무 오류라 재시도하지 않는다.
+  if (res.status !== 403 || readApiError(res)) {
     return res;
   }
 
