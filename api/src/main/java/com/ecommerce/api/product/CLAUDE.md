@@ -27,7 +27,7 @@
   5. 상품 숨김 삭제
   
   썸네일 FK를 먼저 풀지 않으면 `ProductImage` 삭제가 FK 위반이 된다. 판매자 탈퇴용 `deleteAllBySeller`는 같은 작업을 bulk JPQL로 한다.
-- 이미지를 붙일 때는 요청한 이미지가 모두 있고, 판매자 본인이 올렸고, 다른 상품에 붙어 있지 않아야 한다. 남이 올린 이미지는 없는 이미지와 같게 404 `8003`으로 응답한다. 현재는 400 `8002`다. `ProductImage` 생성자가 `markAttached()`를 호출한다. 표시 순서 1인 이미지가 썸네일이 된다.
+- 이미지를 붙일 때는 요청한 이미지가 모두 있고, 판매자 본인이 올렸고, 다른 상품에 붙어 있지 않아야 한다. 남이 올린 이미지는 없는 이미지와 같게 404 `8003`으로 응답한다. `ProductImage` 생성자가 `markAttached()`를 호출한다. 표시 순서 1인 이미지가 썸네일이 된다.
 - 통계 갱신은 SQL 한 문장으로 한다.
   - 주문 수: `ProductStatJdbcRepository.increaseOrderCounts`(배치, `product_id` 오름차순) 또는 `ProductStatRepository.increaseOrderItemCount`
   - 평점: `addReview` / `changeReviewRating`

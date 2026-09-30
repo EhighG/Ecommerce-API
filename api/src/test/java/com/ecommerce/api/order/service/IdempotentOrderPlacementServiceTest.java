@@ -10,10 +10,12 @@ import com.ecommerce.api.support.OrderServiceIntegrationTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
+import static com.ecommerce.api.coupon.enums.CouponStatus.ISSUED;
 import static com.ecommerce.api.coupon.enums.CouponStatus.USED;
 import static com.ecommerce.api.idempotency.enums.IdempotencyStatus.PROCESSING;
 import static com.ecommerce.api.idempotency.enums.IdempotencyStatus.SUCCEEDED;
@@ -191,4 +193,23 @@ class IdempotentOrderPlacementServiceTest extends OrderServiceIntegrationTestSup
         assertThat(cartQuantity(fixture.cartItemId())).isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("남의 쿠폰으로 주문하면 없는 쿠폰과 같은 404 오류이고 아무것도 반영하지 않는다")
+    void givenOthersCoupon_whenPlaceOrder_thenThrowNotFoundAndApplyNothing() {
+        // given
+        OrderFixture buyerFixture = createOrderFixtureWithoutCoupon(10, 1);
+        OrderFixture otherBuyerFixture = createOrderFixtureWithCoupon(10, 1);
+        OrderReq req = orderReq(buyerFixture.cartItemId(), 1, otherBuyerFixture.couponIssuedId());
+
+        // when
+        AppException exception = assertThrows(AppException.class,
+                () -> idempotentOrderPlacementService.placeOrder(req, buyerFixture.buyerId(), "order-others-coupon"));
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(COUPON_ISSUED_NOT_FOUND);
+        assertThat(exception.getErrorCode().httpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(orderRepository.count()).isZero();
+        assertThat(inventoryQuantity(buyerFixture.productId())).isEqualTo(10);
+        assertThat(couponStatus(otherBuyerFixture.couponIssuedId())).isEqualTo(ISSUED);
+    }
 }

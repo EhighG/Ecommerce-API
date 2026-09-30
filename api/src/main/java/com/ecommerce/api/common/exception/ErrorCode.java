@@ -57,13 +57,13 @@ public enum ErrorCode {
     COUPON_SOLD_OUT(BAD_REQUEST, "7507", "쿠폰이 모두 소진되었습니다."),
     COUPON_EVENT_CACHING_FAILED(INTERNAL_SERVER_ERROR, "7508", "쿠폰 이벤트 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
     DUPLICATED_COUPON(BAD_REQUEST, "7509", "같은 쿠폰은 중복 사용할 수 없습니다."),
-    COUPON_ISSUED_NOT_FOUND(BAD_REQUEST, "7510", "해당 쿠폰을 찾을 수 없습니다."),
+    COUPON_ISSUED_NOT_FOUND(NOT_FOUND, "7510", "해당 쿠폰을 찾을 수 없습니다."),
 
     // 8xxx: Media
     MEDIA_OBJECT_NOT_FOUND(NOT_FOUND, "8000", "업로드된 파일을 찾을 수 없습니다."),
     INVALID_MEDIA_CONTENT_TYPE(BAD_REQUEST, "8001", "이미지 파일만 업로드할 수 있습니다."),
     IMAGE_OWNER_MISMATCH(BAD_REQUEST, "8002", "해당 이미지에 대한 권한이 없습니다."),
-    UPLOADED_IMAGE_NOT_FOUND(BAD_REQUEST, "8003", "이미지를 찾을 수 없습니다."),
+    UPLOADED_IMAGE_NOT_FOUND(NOT_FOUND, "8003", "이미지를 찾을 수 없습니다."),
     IMAGE_ALREADY_ATTACHED(BAD_REQUEST, "8004", "이미 상품에 등록된 이미지입니다."),
 
     // 9xxx: 공통

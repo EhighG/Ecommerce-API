@@ -158,8 +158,9 @@ public class ProductService {
         for (ImageIdWithOrder imageInfo : imageInfoList) {
             UploadedImage uploadedImage = uploadedImageMap.get(imageInfo.imageId());
 
+            // 남이 올린 이미지는 없는 이미지와 같게 응답해 존재를 드러내지 않는다
             if (!uploadedImage.getUploadUserId().equals(sellerId))
-                throw new AppException(IMAGE_OWNER_MISMATCH);
+                throw new AppException(UPLOADED_IMAGE_NOT_FOUND);
             if (uploadedImage.isAttached())
                 throw new AppException(IMAGE_ALREADY_ATTACHED);
         }
