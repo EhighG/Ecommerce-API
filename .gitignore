@@ -34,3 +34,4 @@ ignore/
 k6/data/
 **/.env
 .omo/
+k6/test-result/

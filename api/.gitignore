@@ -39,4 +39,5 @@ out/
 ### else ###
 /compose.yaml
 **/application-secret.yaml
-/infra
+/infra/*
+!/infra/scaleout-local/
