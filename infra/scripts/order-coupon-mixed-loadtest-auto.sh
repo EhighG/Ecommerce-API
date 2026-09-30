@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# 부하 발생기 VM에서 주문·쿠폰 혼합 부하테스트를 한 번 실행한다.
+# 1) 후보 SQL로 대상 DB에 데이터를 준비하고 후보 CSV를 만든다 2) k6 시나리오를 돌린다 3) 결과를 저장한다.
+# 전제(이 스크립트는 만들지 않는다):
+#   - $ENV_FILE: RDB_HOST, RDB_PORT(기본 3306), RDB_NAME, RDB_USER, RDB_PASSWORD, BASE_URL, LOADTEST_AUTH_SECRET
+#   - $REPO_DIR: 저장소 clone(최신으로 두는 것은 사용자 몫)
+#   - 대상 DB의 loadtest_marker 표. 부하테스트 전용 DB에만 한 번 만든다: CREATE TABLE loadtest_marker (id int primary key);
+#   - sudo, mysql 클라이언트, k6
+
 # ============================================================
 # 기본 경로
 # ============================================================
@@ -46,9 +54,6 @@ ORDER_CANCEL_P99_MS="${ORDER_CANCEL_P99_MS:-1500}"
 ORDER_DETAIL_P99_MS="${ORDER_DETAIL_P99_MS:-500}"
 HTTP_REQ_FAILED_RATE="${HTTP_REQ_FAILED_RATE:-0.001}"
 FAILURE_DETAIL_LOGGING_ENABLED="${FAILURE_DETAIL_LOGGING_ENABLED:-false}"
-
-# SQL script params
-SQL_PARAM1="${SQL_PARAM1:-1}"
 
 REST_AFTER_DATA_PREPARE_SECONDS="${REST_AFTER_DATA_PREPARE_SECONDS:-30}"
 
@@ -140,52 +145,50 @@ cd "$REPO_DIR"
   echo "[perf] order_detail_p99_ms=$ORDER_DETAIL_P99_MS"
   echo "[perf] http_req_failed_rate=$HTTP_REQ_FAILED_RATE"
   echo "[perf] failure_detail_logging_enabled=$FAILURE_DETAIL_LOGGING_ENABLED"
-
-  echo "[perf] sql_param1=$SQL_PARAM1"
 } | tee "$RESULT_DIR/run-info.txt"
 
 # ============================================================
-# MySQL 접속 확인
+# MySQL 접속 정보(비밀번호가 프로세스 목록에 보이지 않게 권한 600 옵션 파일로 넘긴다)
+# ============================================================
+MYSQL_CNF="$(mktemp)"
+trap 'rm -f "$MYSQL_CNF"' EXIT
+chmod 600 "$MYSQL_CNF"
+{
+  echo "[client]"
+  echo "host=$RDB_HOST"
+  echo "port=$RDB_PORT"
+  echo "user=$RDB_USER"
+  echo "password=\"$RDB_PASSWORD\""
+} > "$MYSQL_CNF"
+
+run_mysql() {
+  mysql --defaults-extra-file="$MYSQL_CNF" "$@"
+}
+
+# ============================================================
+# MySQL 접속과 대상 DB 확인
 # ============================================================
 echo "[perf] check mysql"
-mysql \
-  -h "$RDB_HOST" \
-  -P "$RDB_PORT" \
-  -u "$RDB_USER" \
-  -p"$RDB_PASSWORD" \
-  "$RDB_NAME" \
-  -e "select 1" \
-  | tee "$RESULT_DIR/mysql-check.txt"
+run_mysql "$RDB_NAME" -e "select 1" | tee "$RESULT_DIR/mysql-check.txt"
 
-# ============================================================
-# SQL param 치환 후 데이터 세팅 + candidate 추출
-# ============================================================
-TMP_SQL="$(mktemp)"
-trap 'rm -f "$TMP_SQL"' EXIT
-
-sed \
-  -e "s/:couponEventId/${SQL_PARAM1}/g" \
-  "$SQL_TEMPLATE" > "$TMP_SQL"
-
-LEFTOVER_PARAMS="$(grep -nE ':[A-Za-z_][A-Za-z0-9_]*' "$TMP_SQL" || true)"
-if [[ -n "$LEFTOVER_PARAMS" ]]; then
-  echo "[perf] unresolved SQL params remain:" >&2
-  echo "$LEFTOVER_PARAMS" >&2
+# 후보 SQL은 데이터를 넣는다. 부하테스트 전용으로 표시한 DB가 아니면 멈춘다.
+MARKER_COUNT="$(run_mysql --batch --skip-column-names "$RDB_NAME" \
+  -e "select count(*) from information_schema.tables where table_schema = database() and table_name = 'loadtest_marker'")"
+if [[ "$MARKER_COUNT" != "1" ]]; then
+  echo "[perf] $RDB_HOST:$RDB_PORT/$RDB_NAME has no loadtest_marker table. Refusing to prepare data on a DB not marked for load testing." >&2
   exit 1
 fi
 
-echo "[perf] prepared SQL path=$TMP_SQL"
+# ============================================================
+# 데이터 준비 + candidate 추출(실행마다 새 쿠폰 이벤트를 만든다)
+# ============================================================
 echo "[perf] execute data setup and export"
 
-mysql \
-  -h "$RDB_HOST" \
-  -P "$RDB_PORT" \
-  -u "$RDB_USER" \
-  -p"$RDB_PASSWORD" \
+run_mysql \
   --batch \
   --raw \
   "$RDB_NAME" \
-  < "$TMP_SQL" \
+  < "$SQL_TEMPLATE" \
   > "$CANDIDATE_FILE"
 
 # ============================================================

@@ -1,4 +1,8 @@
 -- order_coupon_mixed_candidates - V3
+-- 부하테스트 전용 DB에서만 실행한다. infra/scripts/order-coupon-mixed-loadtest-auto.sh가 loadtest_marker 표로 확인한다.
+-- 하는 일: 장바구니 항목을 넣고, 실행마다 새 쿠폰 이벤트와 발급 쿠폰을 만든 뒤, 주문 후보를 출력한다(데이터 준비 + 후보 추출).
+-- 기존 쿠폰 데이터는 지우지 않는다. 새 이벤트 ID는 last_insert_id()로 받아 이 세션 안에서만 쓴다.
+-- 출력 열: email, userId, cartItemId, productId, orderQuantity, couponEventId, couponIssuedId
 set @target_total_rows := 37806;
 set @target_coupon_rows := 7089;
 set @target_normal_rows := @target_total_rows - @target_coupon_rows;
@@ -7,11 +11,6 @@ set @cart_items_per_buyer := 6;
 set @target_cart_item_rows := @target_buyer_rows * @cart_items_per_buyer;
 set @target_product_rows := 3000;
 set @min_inventory_quantity := 40;
-
-set foreign_key_checks = 0;
-truncate coupon_issued;
-truncate coupon_event;
-set foreign_key_checks = 1;
 
 insert ignore into cart_item (
   user_id,
@@ -104,6 +103,8 @@ values (
     utc_timestamp()
 );
 
+set @coupon_event_id := last_insert_id();
+
 insert into coupon_issued (
   coupon_event_id, user_id, status,
   issued_at, expires_at, used_at,
@@ -130,19 +131,19 @@ with eligible_users as (
     and not exists (
       select 1
       from coupon_issued ci
-      where ci.coupon_event_id = :couponEventId
+      where ci.coupon_event_id = @coupon_event_id
         and ci.user_id = u.id
     )
 )
 select
-  :couponEventId,
+  @coupon_event_id,
   eu.id,
   'ISSUED',
-  current_timestamp,
-  timestampadd(day, 1, current_timestamp),
+  utc_timestamp(),
+  utc_timestamp() + interval 1 day,
   null,
-  current_timestamp,
-  current_timestamp
+  utc_timestamp(),
+  utc_timestamp()
 from eligible_users eu
 where eu.rn <= @target_coupon_rows;
 
@@ -155,7 +156,6 @@ with coupon_source as (
     1 as orderQuantity,
     ce.id as couponEventId,
     ci_coupon.id as couponIssuedId,
-    case when mod(ci_cart.id, 3) = 0 then 'true' else 'false' end as cancelAfterOrder,
     row_number() over (
       partition by ci_coupon.id
       order by mod(ci_cart.id * 17 + ci_coupon.id * 131, 1000003), ci_cart.id
@@ -170,7 +170,7 @@ with coupon_source as (
   join cart_item ci_cart on ci_cart.user_id = u.id
   join product p on p.id = ci_cart.product_id
   join inventory i on i.product_id = p.id
-  where ci_coupon.coupon_event_id = :couponEventId
+  where ci_coupon.coupon_event_id = @coupon_event_id
     and u.role = 'BUYER'
     and u.deleted = false
     and u.id >= 10
@@ -178,12 +178,15 @@ with coupon_source as (
     and ci_cart.quantity >= 1
     and i.quantity >= 1
     and ci_coupon.status = 'ISSUED'
-    and ci_coupon.expires_at > current_timestamp
+    and ci_coupon.expires_at > utc_timestamp()
+    -- 할인액이 0원이 되는 상품은 주문이 거절되므로 쿠폰 후보에서 뺀다(주문 수량 1 기준)
+    and p.unit_price > 0
+    and (ce.type <> 'PERCENT' or floor(p.unit_price * ce.discount_value / 100) >= 1)
 ),
 coupon_ranked as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssuedId, cancelAfterOrder,
+    couponEventId, couponIssuedId,
     row_number() over (order by couponIssuedId) as rn
   from coupon_source
   where coupon_rn = 1
@@ -192,7 +195,7 @@ coupon_ranked as (
 coupon_rows as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssuedId, cancelAfterOrder, rn
+    couponEventId, couponIssuedId, rn
   from coupon_ranked
   where rn <= @target_coupon_rows
 ),
@@ -204,8 +207,7 @@ normal_source as (
     p.id as productId,
     1 as orderQuantity,
     null as couponEventId,
-    null as couponIssuedId,
-    case when mod(ci.id, 5) = 0 then 'true' else 'false' end as cancelAfterOrder
+    null as couponIssuedId
   from cart_item ci
   join users u on u.id = ci.user_id
   join product p on p.id = ci.product_id
@@ -225,7 +227,7 @@ normal_source as (
 normal_ranked as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssuedId, cancelAfterOrder,
+    couponEventId, couponIssuedId,
     row_number() over (
       order by mod(userId * 131 + cartItemId * 17, 1000003), cartItemId
     ) as rn
@@ -234,14 +236,14 @@ normal_ranked as (
 normal_rows as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssuedId, cancelAfterOrder, rn
+    couponEventId, couponIssuedId, rn
   from normal_ranked
   where rn <= @target_normal_rows
 ),
 mixed_rows as (
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssuedId, cancelAfterOrder,
+    couponEventId, couponIssuedId,
     floor((rn - 0.5) * @target_total_rows / @target_coupon_rows) as sort_bucket,
     0 as sort_type
   from coupon_rows
@@ -250,7 +252,7 @@ mixed_rows as (
 
   select
     email, userId, cartItemId, productId, orderQuantity,
-    couponEventId, couponIssuedId, cancelAfterOrder,
+    couponEventId, couponIssuedId,
     floor((rn - 0.5) * @target_total_rows / @target_normal_rows) as sort_bucket,
     1 as sort_type
   from normal_rows
@@ -262,7 +264,6 @@ select
   productId,
   orderQuantity,
   coalesce(couponEventId, '') as couponEventId,
-  coalesce(couponIssuedId, '') as couponIssuedId,
-  cancelAfterOrder
+  coalesce(couponIssuedId, '') as couponIssuedId
 from mixed_rows
 order by sort_bucket, sort_type, cartItemId;
