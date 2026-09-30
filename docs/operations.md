@@ -110,16 +110,18 @@
 
 ## 부하테스트 (`k6/`, `infra/`)
 
-- 대상 서버는 `loadtest` 프로필로 띄운다. 부하 발생기 VM에서 `infra/scripts/order-coupon-mixed-loadtest-auto.sh`를 실행하면 다음을 차례로 한다:
-  1. `/opt/ecommerce` 아래에 `.env`와 저장소를 둔다.
-  2. 후보 데이터 SQL을 실행하고 CSV를 만든다.
-  3. k6 주문·쿠폰 혼합 시나리오를 실행한다.
-  4. 결과를 `results/perf/{RUN_ID}`에 저장한다.
-- 주요 입력(환경변수)
-  - `TEST_MODE`: `fixed` 또는 `capacity`
-  - `ORDER_RATE`, `DURATION`
-  - `WARMUP_*`
-  - `CANCEL_RATIO`: 기본 0.3
-  - p99 임계값: `ORDER_CREATE_P99_MS` 등
-- 스크립트를 직접 실행하려면 `BASE_URL`(`http://호스트:8081/api`)과 `LOADTEST_AUTH_SECRET`이 필요하다. `k6/.env`나 환경변수로 준다.
-- `k6/data/`는 커밋하지 않는다(개인정보성 테스트 계정, 대용량 CSV).
+- 대상 서버는 `loadtest` 프로필로 띄우고 `LOADTEST_AUTH_ENABLED=true`와 추측할 수 없는 `LOADTEST_AUTH_SECRET`을 준다.
+- **자동 실행**: 부하 발생기 VM에서 `infra/scripts/order-coupon-mixed-loadtest-auto.sh`를 실행한다.
+  - 미리 준비할 것. 스크립트는 만들지 않고, 없으면 종료한다.
+    - `/opt/ecommerce/loadtest/.env`: `RDB_HOST`, `RDB_PORT`(기본 3306), `RDB_NAME`, `RDB_USER`, `RDB_PASSWORD`, `BASE_URL`, `LOADTEST_AUTH_SECRET`. DB 사용자 키 이름이 서버의 `RDB_USERNAME`과 다르다.
+    - `/opt/ecommerce/repo/Ecommerce-project`: 저장소 clone. 스크립트는 pull하지 않는다.
+    - 대상 DB의 `loadtest_marker` 표. 부하테스트 전용 DB에만 한 번 만든다: `CREATE TABLE loadtest_marker (id int primary key);`. 이 표가 없는 DB에는 데이터를 넣지 않고 멈춘다.
+    - `sudo`, `mysql` 클라이언트, `k6`
+  - 하는 일
+    1. DB 접속과 `loadtest_marker` 표를 확인한다. DB 비밀번호는 권한 600 임시 옵션 파일로 넘겨 프로세스 목록에 보이지 않게 한다.
+    2. `infra/sql/order_coupon_mixed_candidates_V3.sql`을 실행한다. 장바구니 항목을 넣고, 실행마다 새 쿠폰 이벤트와 발급 쿠폰을 만든 뒤, 주문 후보를 `k6/data/order_coupon_mixed_candidates.csv`로 받는다(데이터 준비 + 후보 추출). 기존 쿠폰 데이터는 지우지 않는다.
+    3. `REST_AFTER_DATA_PREPARE_SECONDS`(기본 30초) 쉰 뒤 k6 주문·쿠폰 혼합 시나리오를 실행한다.
+    4. 결과를 `/opt/ecommerce/results/perf/{RUN_ID}`에 저장한다.
+  - 주요 입력(환경변수): `TEST_MODE`(`fixed` 또는 `capacity`), `ORDER_RATE`(기본 60. k6 스크립트를 직접 돌릴 때의 기본값은 30이다), `DURATION`, `WARMUP_*`, `CANCEL_RATIO`(기본 0.3), p99 임계값(`ORDER_CREATE_P99_MS` 등), `RUN_ID`
+- **스크립트를 직접 실행할 때**: 키 이름은 `k6/.env.example`에 있다. 헤더 우회 방식(주문·쿠폰 혼합)은 `BASE_URL`, `LOADTEST_AUTH_SECRET`과 `userId` 열이 있는 후보 CSV(`k6/data/order_coupon_mixed_candidates.csv` 또는 `ORDER_COUPON_CANDIDATES_FILE`)가 필요하다. 로그인 방식 스크립트는 `BASE_URL`과 `PASSWORD`(모든 테스트 계정 공통, 가입 비밀번호 규칙을 만족)가 필요하다. 스크립트 목록과 데이터 준비 순서는 `k6/CLAUDE.md`에 있다.
+- `k6/data/`는 커밋하지 않는다(테스트 계정 목록, 대용량 CSV).

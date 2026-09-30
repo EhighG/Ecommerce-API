@@ -147,6 +147,6 @@
 
 ### 부하테스트를 돌릴 때
 1. 대상 서버를 `loadtest` 프로필, `LOADTEST_AUTH_ENABLED=true`, `LOADTEST_AUTH_SECRET`으로 띄운다.
-2. 후보 데이터를 준비한다: `infra/sql/order_coupon_mixed_candidates_V3.sql`로 후보를 뽑아 `k6/data/*.csv`를 만든다.
+2. 후보 데이터를 준비한다. `infra/sql/order_coupon_mixed_candidates_V3.sql`은 장바구니 항목과 새 쿠폰 이벤트·발급 쿠폰을 넣은 뒤 후보를 뽑는다(데이터 준비 + 후보 추출). 그래서 부하테스트 전용 DB에서만 돌린다. 자동 실행 스크립트가 대상 DB 확인(`loadtest_marker` 표)과 CSV 생성을 한다(`operations.md`).
 3. 워밍업 구간(기본 3분)을 반드시 둔다. JVM 워밍업 없이 측정한 값은 비교에 쓰지 않는다.
 4. 확인: 결과를 비교할 때는 부하율, 구간 구성, 데이터, DB 인스턴스 사양이 같은지 먼저 맞춘다. DB 인스턴스만 바꿔도 결과가 수십 배 달라진 적이 있다.
