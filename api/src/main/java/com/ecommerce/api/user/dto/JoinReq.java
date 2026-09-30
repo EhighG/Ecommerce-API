@@ -3,6 +3,8 @@ package com.ecommerce.api.user.dto;
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.common.exception.ErrorCode;
 import com.ecommerce.api.user.enums.UserRole;
+import com.ecommerce.api.user.support.PasswordPolicy;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,5 +22,10 @@ public record JoinReq(
             throw new AppException(ErrorCode.PASSWORD_CHECK_MISMATCH);
         if (UserRole.ADMIN.equals(role))
             throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+
+    @AssertTrue(message = PasswordPolicy.MESSAGE)
+    public boolean isPasswordPolicySatisfied() {
+        return PasswordPolicy.isSatisfied(password);
     }
 }

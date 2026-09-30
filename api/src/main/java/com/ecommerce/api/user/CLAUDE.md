@@ -16,7 +16,7 @@
   - 이메일 중복 검사는 탈퇴자를 포함한다(`existsByEmail`). 중복이면 409(`1001`)다.
   - 비밀번호는 `PasswordEncoder`(BCrypt)로 해시한 값만 저장한다.
   - `JoinReq`가 `ADMIN` 역할과 비밀번호 확인 불일치를 거절한다.
-  - 비밀번호 규칙(`docs/security.md`)은 가입의 `password`와 비밀번호 변경의 새 비밀번호에만 `@AssertTrue`로 검사한다. 현재는 비어 있지 않은지만 본다.
+  - 비밀번호 규칙(`docs/security.md`)은 가입의 `password`와 비밀번호 변경의 새 비밀번호에만 `@AssertTrue`로 검사한다(`support/PasswordPolicy`).
 - 다른 도메인에서 사용자를 조회할 때는 `getUserNotDeleted(id)`를 쓴다. `getUser(id)`는 탈퇴자도 돌려준다.
 - 탈퇴(`withdraw`)의 순서:
   1. 탈퇴하지 않은 사용자 조회

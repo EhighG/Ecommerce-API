@@ -55,16 +55,16 @@ public class LoadTestAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            filterChain.doFilter(request, response);
+        String secretHeaderValue = request.getHeader(SECRET_HEADER);
+
+        // 헤더가 있는 요청은 CSRF 검사를 건너뛰므로, 세션으로 이미 인증된 요청이어도 secret부터 검증한다
+        if (StringUtils.isBlank(secretHeaderValue) || !secretHeaderValue.equals(properties.secret())) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "secret 불일치");
             return;
         }
 
-        String secretHeaderValue = request.getHeader(SECRET_HEADER);
-
-        // secret 헤더 값 기반으로 검증
-        if (StringUtils.isBlank(secretHeaderValue) || !secretHeaderValue.equals(properties.secret())) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "secret 불일치");
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            filterChain.doFilter(request, response);
             return;
         }
 

@@ -37,7 +37,8 @@ public class JsonUsernamePasswordAuthenticationFilter extends AbstractAuthentica
             throw new AuthenticationServiceException("로그인 요청 body 파싱 실패", e);
         }
 
-        if (!StringUtils.hasText(loginReq.email()) || !StringUtils.hasText(loginReq.password())) {
+        // 본문이 JSON null이면 readValue가 예외 없이 null을 돌려준다
+        if (loginReq == null || !StringUtils.hasText(loginReq.email()) || !StringUtils.hasText(loginReq.password())) {
             throw new BadCredentialsException("ID, 비밀번호는 필수입니다.");
         }
 
