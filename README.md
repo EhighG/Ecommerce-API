@@ -313,4 +313,4 @@ Case 1 완료 후에도, 같은 주문 시나리오 60 iter/s 기준 API VM 및 
 
 ## 기타 문서
 
-- [API 명세](docs/api-spec.md)
+- [API 계약](docs/contracts.md)
