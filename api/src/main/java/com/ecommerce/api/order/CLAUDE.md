@@ -38,7 +38,7 @@
   - `Order.totalPrice = Σ OrderLine.finalLinePrice()`(할인 후)
   - 응답의 `finalLinePrice`는 `linePrice − 스냅샷 할인액`으로 계산한다.
   - 새 응답을 만들 때도 이 공식을 쓴다.
-  - `Order.totalPrice`는 주문 시점 값이라 취소해도 바꾸지 않는다. 주문 상세의 현재 금액(`currentTotalPrice`)은 취소되지 않은 항목의 `finalLinePrice` 합으로 조회할 때 계산한다(저장 컬럼 없음). 현재는 이 필드가 없다.
+  - `Order.totalPrice`는 주문 시점 값이라 취소해도 바꾸지 않는다. 주문 상세의 현재 금액(`currentTotalPrice`)은 취소되지 않은 항목의 `finalLinePrice` 합으로 조회할 때 계산한다(저장 컬럼 없음).
 - 판매자 판정(`isSeller`)과 판매자 기준 조회는 `OrderItem.product.seller.id`(주문 시점 스냅샷)로 한다. 현재 `Product.seller`를 조인하지 않는다.
 - 권한이 없으면 `ORDER_ACCESS_DENIED`(404)를 쓴다. 역할이 맞지 않는 주문항목 목록 조회는 `NO_PERMISSIONS`(404)다.
 - `createUsedCouponSnapshot`은 `orderLines`와 `saved.getItemList()`의 **인덱스가 같은 항목끼리** 짝짓는다. `Order` 생성자가 `orderLines` 순서대로 항목을 추가하기 때문이다. 이 순서를 바꾸면 쿠폰이 다른 항목에 붙는다.
