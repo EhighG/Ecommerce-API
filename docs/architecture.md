@@ -27,6 +27,10 @@ API 인스턴스 ──HTTP :8090──▶ Prometheus(수집) ──▶ Grafana
 | 관리 포트 :8090 | `health`, `prometheus`만 노출, 인증 없음 | 외부 접근은 인프라 방화벽으로 막는다. 애플리케이션은 이 포트를 막지 않는다. |
 | 배포 | GitHub Actions(수동 실행) → Artifact Registry 이미지 → GCE Managed Instance Group 전체 교체 | 무중단 배포가 아니다. 모든 인스턴스를 동시에 교체한다(`max-unavailable=100%`). |
 
+## 데이터 모델
+
+테이블 관계와 핵심 제약(유니크, FULLTEXT)은 [README의 ERD](../README.md#erd)에, 컬럼 전체는 `api/db/schema.sql`에 있다.
+
 ## 애플리케이션 내부 모듈
 
 패키지는 도메인 단위로 나뉘고, 각 패키지 안은 `controller → service → repository → entity` 계층을 따른다. 모듈 사이의 의존은 코드에서 확인한다(서로 참조하는 모듈이 여럿 있다).

@@ -10,7 +10,7 @@
 Ecommerce-project/
 ├── CLAUDE.md                      → 이 문서. AGENTS.md는 이 문서를 가리키기만 한다
 ├── CONTEXT.md                     → 용어집
-├── README.md                      → 프로젝트 소개
+├── README.md                      → 프로젝트 소개(성과 요약, ERD)
 ├── docs/
 │   ├── architecture.md            → 구성 요소 연결, 주문 생성 흐름, 모듈 역할, 스케줄 작업
 │   ├── business-rules.md          → 업무 규칙: 주문 상태, 금액·할인 계산, 쿠폰, 재고, 삭제 전파
@@ -20,6 +20,7 @@ Ecommerce-project/
 │   ├── operations.md              → 로컬 설정, 명령, 환경변수, 배포, 부하테스트 실행
 │   ├── contracts.md               → 외부 REST API 계약(클라이언트 절차, 오류 규칙, 엔드포인트)
 │   ├── adr/                       → 결정 기록(index.md + 0001~0005)
+│   ├── cases/                     → 성과 사례 상세(부하테스트 측정값의 원본)
 │   ├── assets/                    → 기존 다이어그램 이미지
 │   ├── agents/                    → 스킬 설정(이슈 트래커, 트리아지 라벨, 도메인 문서 위치)
 │   └── tracking/
