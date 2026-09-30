@@ -25,11 +25,9 @@
    - ngram 옵션은 서버를 띄울 때만 정할 수 있다. 나중에 바꾸려면 FULLTEXT 인덱스를 다시 만들어야 한다.
 2. **스키마 만들기**
    - 애플리케이션은 테이블을 만들지 않는다(`validate`). 1단계 DB가 떠 있어야 한다.
-   - 저장소에는 전체 DDL 스크립트가 없다. 로컬에 보관 중인 덤프(`ignore/` 아래, 커밋되지 않음)를 복원한다.
-   - 덤프가 없으면 엔티티에서 만드는 수밖에 없다. 로컬에서만 `ddl-auto`를 잠시 `create`로 바꿔 한 번 띄운 뒤 `validate`로 되돌린다. 이 변경은 커밋하지 않는다.
-   - 그다음 FULLTEXT 인덱스를 만든다:
-     ```sql
-     ALTER TABLE product ADD FULLTEXT INDEX ft_product_name_description (name, description) WITH PARSER ngram;
+   - 빈 DB에 `api/db/schema.sql`을 실행한다. 테이블과 FULLTEXT 인덱스를 모두 만든다. 서버 옵션과 인덱스를 확인하는 쿼리는 파일 머리에 있다.
+     ```bash
+     mysql -h 127.0.0.1 -P 3307 -u <사용자> -p ecommerce < api/db/schema.sql
      ```
 3. **기초 데이터 넣기**
    - 카테고리: 관리자 API로 만들거나, 로컬 전용 SQL을 쓴다.
@@ -84,13 +82,14 @@
 
 순서:
 1. DB 스키마 변경이 있으면 **먼저** 클라우드 MySQL에 DDL을 적용한다. 새 이미지는 `validate`에 실패하면 기동하지 않는다.
-2. `develop`을 `release`에 squash merge한 뒤, `release`를 `develop`에 역병합한다.
+2. `release`를 배포할 `develop` 커밋으로 옮긴다. fast-forward만 한다: `git push origin develop:release`
 3. GitHub Actions에서 `Backend Deploy` 워크플로를 `release` 기준으로 수동 실행한다. 워크플로가 하는 일:
    1. 테스트
    2. 이미지 빌드
    3. `:{커밋 SHA}`와 `:latest`로 push
    4. MIG 인스턴스 전체 교체
    5. 안정 상태가 될 때까지 최대 20분 대기
+4. 배포가 끝나면 그 커밋에 태그를 붙인다: `git tag deploy-YYYY-MM-DD <커밋> && git push origin deploy-YYYY-MM-DD`
 - 교체는 모든 인스턴스를 동시에 내리고 새로 띄운다. 그래서 배포 중에는 서비스가 끊긴다.
 - 워크플로의 안정 대기 단계는 MIG 이름이 `instance-group-2`로 고정되어 있다. `MIG_NAME` 변수와 이름이 다르면 대기 단계가 실패한다.
 

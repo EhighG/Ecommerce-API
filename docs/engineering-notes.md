@@ -5,8 +5,8 @@
 ### 새 DB나 테스트 DB에서 키워드 검색이 500을 낸다
 - **증상**: `GET /api/products?keyword=…`가 500(`9999`)을 내고, 로그에 FULLTEXT 인덱스를 찾을 수 없다는 SQL 오류가 남는다. 키워드가 없는 목록 조회는 정상이다.
 - **원인**
-  - 검색 쿼리는 `MATCH(name, description) AGAINST(? IN BOOLEAN MODE)`를 쓴다. 그런데 이 인덱스는 엔티티 어노테이션에 없고 운영 DB에만 수동으로 만들어져 있다.
-  - `create-drop`으로 스키마를 만드는 테스트 DB나 새로 만든 DB에는 인덱스가 없다.
+  - 검색 쿼리는 `MATCH(name, description) AGAINST(? IN BOOLEAN MODE)`를 쓴다. 그런데 이 인덱스는 엔티티 어노테이션에 없다. `api/db/schema.sql`로 만든 DB에만 있다.
+  - `create-drop`으로 스키마를 만드는 테스트 DB나, 엔티티에서 만든 DB에는 인덱스가 없다.
 - **해결**
   - 인덱스를 만든다: `ALTER TABLE product ADD FULLTEXT INDEX ft_product_name_description (name, description) WITH PARSER ngram;`
   - MySQL 서버를 `--ngram_token_size=2 --innodb_ft_enable_stopword=OFF`로 띄운다. 토큰 크기가 다르면 같은 검색어라도 결과가 달라진다.
@@ -127,7 +127,7 @@
 ## 반복 작업 체크리스트
 
 ### 엔티티나 테이블을 바꿀 때
-1. 엔티티를 수정하고, 같은 변경의 DDL(ALTER/CREATE)을 작성한다.
+1. 엔티티를 수정하고, 같은 변경의 DDL(ALTER/CREATE)을 작성한다. `api/db/schema.sql`에도 같은 변경을 반영한다.
 2. `./gradlew test`를 실행한다. 테스트는 `create-drop`이라 DDL 누락을 잡지 못한다.
 3. 로컬 MySQL에 DDL을 적용하고 `local` 프로필로 기동한다. `validate`가 통과하면 매핑과 DDL이 일치한다는 뜻이다.
 4. 새 테이블이면 `OrderServiceIntegrationTestSupport.CLEANUP_TABLES`에 FK를 고려한 순서로 추가한다. 빠뜨리면 테스트끼리 데이터가 섞인다.
