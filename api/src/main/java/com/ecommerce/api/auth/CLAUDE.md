@@ -9,7 +9,7 @@
 - 새 엔드포인트는 반드시 `adminMatchers` / `allMatchers` / `buyerMatchers` / `sellerMatchers` / `userMatchers` 중 하나에 넣는다.
   - 규칙은 **위에서부터 처음 맞는 것**이 적용된다. 순서는 admin → 공개 → buyer → seller → 로그인이다.
   - 예를 들어 `PATCH /products/{*path}`(SELLER)는 `/products/inventory`와 `/products/{id}/images`까지 포함한다. 더 넓은 패턴을 위에 추가하면 아래 규칙이 가려진다.
-  - 어느 목록에도 넣지 않으면 "로그인한 사용자 누구나"가 된다.
+  - 어느 목록에도 넣지 않으면 "로그인한 사용자 누구나"가 된다. 빠뜨리면 `SecurityMatcherCoverageTest`가 실패한다.
 - `CustomUserDetailsService`는 사용자가 없으면 `AppException`이 아니라 `UsernameNotFoundException`을 던진다. 그래야 Spring Security가 없는 계정에도 비밀번호 비교 시간을 맞추고(계정 존재 여부를 숨김) 내부 오류 로그를 남기지 않는다.
 - `LoadTestAuthenticationFilter`는 `@Profile("loadtest")` + `@ConditionalOnProperty(app.loadtest.auth.enabled=true)`일 때만 빈이 생긴다.
   - 프로필 조건과 설정 조건 중 어느 것도 약하게 만들면 안 된다.
@@ -20,6 +20,8 @@
 - `getUserRole()`은 권한 목록의 첫 번째 `ROLE_` 값을 `UserRole`로 바꾼다. 사용자는 역할을 하나만 가진다는 전제다.
 
 ## 알아둘 구현 방식
+- 로그인·로그아웃은 보안 필터가 처리해서 springdoc이 찾지 못한다. API 명세에는 `AuthOpenApiConfig`가 직접 넣으므로, 필터의 경로나 응답을 바꾸면 그 파일도 고친다.
+- API 명세와 Swagger UI 경로는 springdoc을 켠 프로필(local)에서만 따로 만든 보안 체인(`apiDocsSecurityFilterChain`)이 로그인 없이 연다.
 - 로그인 필터는 폼 로그인을 끄고 `addFilterAt(…, UsernamePasswordAuthenticationFilter.class)`로 넣었다. 성공하면 `HttpSessionSecurityContextRepository`로 세션에 저장한다. 세션 전략이 붙지 않아 생기는 문제는 `docs/tracking/findings/auth-user.md`에 있다.
 - 세션 쿠키 이름은 Spring Session 기본값인 `SESSION`이다. 로그아웃 설정의 `deleteCookies("JSESSIONID")`는 아무것도 지우지 않는다. 로그아웃이 동작하는 것은 세션 무효화 때문이고, 쿠키 만료는 Spring Session이 처리한다. 쿠키 이름에 기대는 코드를 만들지 않는다.
 

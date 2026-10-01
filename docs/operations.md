@@ -65,6 +65,15 @@
 - HikariCP 지표의 풀 이름 태그(`spring.datasource.name`)는 `local`과 `dev`가 `main`, `loadtest`가 `loadtest`다. 대시보드 쿼리는 프로필에 맞는 이름으로 거른다.
 - 포트는 서비스 `8081`(context path `/api`), 관리 `8090`(`/actuator/health`, `/actuator/prometheus`)이다.
 
+## API 명세
+
+- 원본은 컨트롤러와 요청·응답 DTO다. 생성한 명세는 `docs/api/openapi.yaml`에 커밋한다. 결정 이유는 [결정 기록 0006](adr/0006-api-spec-from-code.md)에 있다.
+- 다시 만들기: `cd api && ./gradlew updateOpenApiSpec`. 서버를 띄우지 않고 테스트 컨텍스트에서 만든다. 갱신하지 않고 커밋하면 `OpenApiSpecTest`가 실패한다.
+- 로컬 서버의 Swagger UI: `http://localhost:8081/api/swagger-ui/index.html`. 명세와 UI는 `local` 프로필에서만 켠다. Try it out 순서는 명세 첫머리에 있다.
+- 서버 없이 보기: GitHub Pages(`https://ehighg.github.io/Ecommerce-API/`). `develop`에 push될 때 `docs/api/`가 바뀌었으면 `API Docs` 워크플로가 올린다. Try it out은 꺼져 있다.
+  - 처음 한 번 저장소 설정 Pages의 Source를 GitHub Actions로 정해야 올라간다.
+- 서버를 다시 배포하고 외부 클라이언트가 생기면 다시 정한다: 배포 프로필(`dev`)에서도 명세와 UI를 켤지(켜면 공개 경로가 늘어난다), Pages를 `develop` 대신 배포 워크플로가 배포한 커밋 기준으로 올릴지.
+
 ## 로컬 수평 확장 (선택)
 
 `api/infra/scaleout-local/`에 같은 이미지 인스턴스 2대(`api-1`, `api-2`), nginx(호스트 `8080`에서 두 인스턴스로 분배), Prometheus(`9090`), MySQL(`3307`), Redis(`6379`)를 띄우는 예시가 있다. 스케줄 작업이나 세션을 여러 인스턴스로 확인할 때 쓴다.
@@ -93,6 +102,7 @@
 4. 배포가 끝나면 그 커밋에 태그를 붙인다: `git tag deploy-YYYY-MM-DD <커밋> && git push origin deploy-YYYY-MM-DD`
 - 교체는 모든 인스턴스를 동시에 내리고 새로 띄운다. 그래서 배포 중에는 서비스가 끊긴다.
 - 워크플로의 안정 대기 단계는 MIG 이름이 `instance-group-2`로 고정되어 있다. `MIG_NAME` 변수와 이름이 다르면 대기 단계가 실패한다.
+- 다시 올릴 때 API 명세를 배포 서버에서도 열지는 "API 명세"의 마지막 항목을 본다.
 
 ## 부하테스트 (`k6/`, `infra/`)
 

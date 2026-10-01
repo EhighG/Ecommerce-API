@@ -7,3 +7,4 @@
 | [0003](0003-order-query-batching.md) | 주문 생성의 재고 차감과 통계 증가를 JDBC 배치로 바꾸고, 주문항목 insert 배치와 비동기화는 하지 않는다 | 적용됨 |
 | [0004](0004-horizontal-scale-out.md) | 동일한 API 인스턴스 수평 확장, Redis 세션, 동시 실행해도 안전한 스케줄 작업 | 적용됨 |
 | [0005](0005-coupon-expiry-by-timestamp.md) | 쿠폰 만료는 만료 시각으로 판정하고, 상태를 일괄로 바꾸지 않는다 | 적용됨 |
+| [0006](0006-api-spec-from-code.md) | API 명세는 코드에서 생성해 커밋하고, 코드와 같은지를 테스트로 강제한다 | 적용됨 |

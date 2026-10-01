@@ -11,6 +11,8 @@
 - 상품: 등록·수정·삭제, 전문 검색(FULLTEXT, ngram)과 정렬, 조회수 집계
 - 그 밖에: 회원·세션 인증, 장바구니, 리뷰·평점, 상품 이미지 업로드(GCS 서명 URL)
 
+API 명세: [Swagger UI](https://ehighg.github.io/Ecommerce-API/) · [openapi.yaml](docs/api/openapi.yaml)
+
 ## 주요 성과
 
 **1. [주문 생성 DB 호출 수 감축을 통한 병목 완화](docs/cases/01-order-query-batching.md)** <br>

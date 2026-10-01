@@ -18,8 +18,9 @@ Ecommerce-project/
 │   ├── standards.md               → 반드시 지킬 규칙: 빌드, 검증, 브랜치, 락 순서, 스키마, 오류 코드, 문서 작성
 │   ├── engineering-notes.md       → 함정(증상→원인→해결), 동작 방식, 반복 작업 체크리스트
 │   ├── operations.md              → 로컬 설정, 명령, 환경변수, 배포, 부하테스트 실행
-│   ├── contracts.md               → 외부 REST API 계약(클라이언트 절차, 오류 규칙, 엔드포인트)
-│   ├── adr/                       → 결정 기록(index.md + 0001~0005)
+│   ├── contracts.md               → 외부 REST API 계약 중 엔드포인트에 걸치는 것(클라이언트 절차, 오류 규칙)
+│   ├── api/                       → API 명세(코드에서 생성한 openapi.yaml)와 GitHub Pages용 Swagger UI 페이지
+│   ├── adr/                       → 결정 기록(index.md + 0001~0006)
 │   ├── cases/                     → 성과 사례 상세(부하테스트 측정값의 원본)
 │   ├── assets/                    → 기존 다이어그램 이미지
 │   ├── agents/                    → 스킬 설정(이슈 트래커, 트리아지 라벨, 도메인 문서 위치)
@@ -46,6 +47,7 @@ Ecommerce-project/
 ├── infra/                         → 부하테스트 자동화 스크립트, 후보 데이터 SQL
 └── .github/workflows/
     ├── test.yaml                  → develop으로 가는 PR마다 테스트 실행
+    ├── api-docs.yaml              → develop의 API 명세를 GitHub Pages에 올림
     └── deploy.yaml                → 수동 배포 워크플로(테스트 → 이미지 → 인스턴스 교체)
 ```
 
@@ -64,6 +66,7 @@ Ecommerce-project/
 - 항상: `docs/standards.md`, `docs/engineering-notes.md`, 작업할 모듈의 `CLAUDE.md`, 해당 영역의 findings 파일(`docs/tracking/findings/`)
 - 주문 생성·취소, 재고, 쿠폰 사용을 바꿀 때: `docs/business-rules.md`의 "주문 생성", "주문항목 상태", "쿠폰"과 `docs/architecture.md`의 대표 흐름. 그리고 `docs/standards.md`의 트랜잭션·동시성 규칙
 - 인증, 인가, 새 엔드포인트: `docs/security.md`의 인가 표와 404/403 기준. 그리고 `docs/engineering-notes.md`의 "API 엔드포인트를 추가할 때"
+- 컨트롤러나 요청·응답 DTO 변경: `api/CLAUDE.md`의 API 명세 규칙(명세를 다시 만들어 함께 커밋한다)
 - 엔티티나 테이블 변경: `docs/engineering-notes.md`의 "엔티티나 테이블을 바꿀 때"와 FULLTEXT 인덱스 함정, `api/db/schema.sql`
 - 응답 형식이나 오류 코드 변경: `docs/contracts.md`의 공통 규칙, `docs/standards.md`의 오류 코드 대역, `k6/CLAUDE.md`(스크립트가 응답을 파싱함)
 - 스케줄 작업, Redis 키 변경: `docs/architecture.md`의 스케줄 작업, `docs/adr/0004-horizontal-scale-out.md`
