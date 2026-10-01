@@ -18,7 +18,7 @@
   - **로그인 방식**(`lib/auth.js`): 세션·CSRF 절차와 재시도 조건은 `docs/contracts.md`의 "세션과 CSRF"를 따르고, `requestWithCsrfRetry`가 그 재시도를 맡는다.
   - **헤더 우회 방식**(`260519_order_bypass_auth`): `X-LoadTest-User-Id`, `X-LoadTest-Secret`. 대상 서버가 `loadtest` 프로필이고 우회가 켜져 있어야 한다. 실사용 서버를 대상으로 쓰지 않는다.
 - 주문 생성 요청의 `Idempotency-Key`는 `docs/contracts.md`의 규칙대로 `lib/idempotency.js`로 만든다. 다른 주문에 키를 재사용하면 서버가 기존 주문을 재응답하므로 처리량이 부풀려진다.
-- 응답을 파싱하는 코드는 서버 계약(`docs/contracts.md`)을 따른다. 오류 `code`가 문자열이므로 스크립트의 기대 코드 상수도 문자열로 쓴다(`"2501"`).
+- 응답을 파싱하는 코드는 서버 계약을 따른다. 필드와 엔드포인트별 오류는 API 명세(`docs/api/openapi.yaml`), 공통 규칙은 `docs/contracts.md`에 있다. 오류 `code`가 문자열이므로 스크립트의 기대 코드 상수도 문자열로 쓴다(`"2501"`).
 
 ## 알아둘 구현 방식
 - 주문·쿠폰 혼합 시나리오(260519)

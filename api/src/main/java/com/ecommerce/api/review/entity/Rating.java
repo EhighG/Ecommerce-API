@@ -17,6 +17,9 @@ import java.math.BigDecimal;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Rating {
 
+    // 요청·응답 DTO의 halfStars 필드 설명(API 명세)
+    public static final String HALF_STARS_DESCRIPTION = "0.5점 단위 별점을 정수로 나타낸 값(0~10). 화면 별점은 halfStars ÷ 2다.";
+
     @Min(0)
     @Max(10)
     @Column(name = "rating", nullable = false)

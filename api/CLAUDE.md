@@ -9,12 +9,17 @@
 ## 공통 구현 방식
 - 목록 조회는 fetch join 또는 DTO projection(JPQL `new …`, Querydsl `Projections.constructor`)으로 한다. 목록마다 N+1이 생기지 않게 한다.
 - 썸네일이나 이미지 URL은 저장된 object key를 `MediaService.resolveUrl`로 바꿔서 만든다. URL을 DB에 저장하지 않는다. 버킷 공개 설정이나 기본 URL이 바뀌어도 데이터를 옮길 필요가 없게 하기 위해서다.
+- 컨트롤러와 요청·응답 DTO가 API 명세(`../docs/api/openapi.yaml`)의 원본이다.
+  - 메서드마다 `@Operation`과 분기할 오류(`@ApiErrorCode`, 없으면 `@ApiErrorCodes({})`)를 단다. `@ApiErrorCode`에는 조건(`when`)만 적고, 상태·코드·메시지는 `ErrorCode`에서 채워진다. 역할은 적지 않는다(원본은 `SecurityConfig`).
+  - 이름과 검증 어노테이션으로 알 수 없는 필드(생성자에서 검사하는 조건, 기본값, 다른 응답에서 가져올 값)에만 `@Schema`를 단다. `@AssertTrue` 검증 메서드와 경로 값으로 채우는 필드는 `@Schema(hidden = true)`로 숨긴다. 쿼리 record 인자에는 `@ParameterObject`를 단다.
+  - 바꾸면 `./gradlew updateOpenApiSpec`으로 명세를 다시 만들어 함께 커밋한다. 갱신하지 않거나 어노테이션을 빠뜨리면 `OpenApiSpecTest`가 실패한다.
 
 ## 테스트 방식
 - **단위 테스트**
   - Mockito와 `support/UnitTestFixtures`(`buyer()`, `seller()`, `product()`, `cartItemWithId()` 등)를 쓴다.
   - ID가 필요하면 `ReflectionTestUtils`로 넣는다.
   - 메서드 이름은 `동작_조건_결과` 또는 `given…_when…_then…` 형식이고, `@DisplayName`은 한국어로 쓴다.
+- **웹 계층 테스트**: `support/WebLayerTestSupport`를 상속한다. 컨트롤러만 띄우고 서비스는 mock이며, API 명세 테스트와 matcher 누락 테스트가 쓴다. 컨트롤러가 새 서비스에 의존하면 여기에 mock을 추가한다.
 - **통합 테스트**: `support/OrderServiceIntegrationTestSupport`를 상속한다.
   - MySQL 8.4 컨테이너를 JVM당 한 번 띄운다.
   - 테스트 클래스는 트랜잭션 밖(`NOT_SUPPORTED`)에서 실행한다. 준비 데이터는 `tx(...)`로 커밋한다.

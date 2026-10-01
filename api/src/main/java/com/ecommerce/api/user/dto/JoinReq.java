@@ -4,6 +4,7 @@ import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.common.exception.ErrorCode;
 import com.ecommerce.api.user.enums.UserRole;
 import com.ecommerce.api.user.support.PasswordPolicy;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -13,9 +14,9 @@ import jakarta.validation.constraints.Size;
 public record JoinReq(
         @NotBlank(message = "이메일은 필수입니다.") @Email(message = "이메일 형식이 올바르지 않습니다.") String email,
         @NotBlank(message = "닉네임은 필수입니다.") @Size(max = 20, message = "닉네임은 20자 이하여야 합니다.") String nickname,
-        @NotBlank(message = "비밀번호는 필수입니다.") String password,
-        @NotBlank(message = "비밀번호 확인은 필수입니다.") String passwordCheck,
-        @NotNull(message = "회원 유형은 필수입니다.") UserRole role
+        @Schema(description = PasswordPolicy.MESSAGE) @NotBlank(message = "비밀번호는 필수입니다.") String password,
+        @Schema(description = "`password`와 같아야 한다") @NotBlank(message = "비밀번호 확인은 필수입니다.") String passwordCheck,
+        @Schema(description = "`BUYER` 또는 `SELLER`. `ADMIN`은 거절한다") @NotNull(message = "회원 유형은 필수입니다.") UserRole role
 ) {
     public JoinReq {
         if (password != null && passwordCheck != null && !password.equals(passwordCheck))
@@ -24,6 +25,7 @@ public record JoinReq(
             throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
+    @Schema(hidden = true)
     @AssertTrue(message = PasswordPolicy.MESSAGE)
     public boolean isPasswordPolicySatisfied() {
         return PasswordPolicy.isSatisfied(password);

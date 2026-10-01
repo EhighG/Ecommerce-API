@@ -3,16 +3,17 @@ package com.ecommerce.api.order.dto;
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.common.exception.ErrorCode;
 import com.ecommerce.api.order.enums.OrderStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 
 import java.util.List;
 
 public record OrderItemSearchReq(
-        Long orderId,
-        Long sellerId,
-        List<OrderStatus> statusList,
-        @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
-        @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") Integer size
+        @Schema(description = "이 주문의 항목을 조회한다(구매자). `sellerId`와 함께 줄 수 없다") Long orderId,
+        @Schema(description = "본인 ID. 자기 상품의 주문항목을 조회한다(판매자)") Long sellerId,
+        @Schema(description = "`sellerId`로 조회할 때만 쓴다") List<OrderStatus> statusList,
+        @Schema(defaultValue = "0") @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
+        @Schema(defaultValue = "20", allowableValues = {"20", "50", "100"}) @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") Integer size
 ) {
     public OrderItemSearchReq {
         boolean ofBuyer = orderId != null && sellerId == null;
