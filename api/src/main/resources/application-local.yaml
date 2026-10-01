@@ -55,6 +55,12 @@ app:
       upload-prefix: ${GCS_UPLOAD_PREFIX}
       public-base-url: https://storage.googleapis.com/${GCS_BUCKET}
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 logging:
   level:
     org.hibernate.SQL: debug

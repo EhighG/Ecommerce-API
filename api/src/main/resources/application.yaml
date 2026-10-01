@@ -19,6 +19,17 @@ management:
       probes:
         enabled: true
 
+# API 명세(springdoc). 실행 중인 서버에서는 local 프로필에서만 켠다
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+    persist-authorization: true
+    tags-sorter: alpha
+  default-produces-media-type: application/json
+  writer-with-order-by-keys: true
+
 # custom
 app:
   storage:

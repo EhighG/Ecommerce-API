@@ -7,6 +7,7 @@ import com.ecommerce.api.auth.filter.LoadTestAuthenticationFilter;
 import com.ecommerce.api.user.enums.UserRole;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,7 +49,7 @@ public class SecurityConfig {
         return PATH.matcher(pattern);
     }
 
-    private static RequestMatcher[] adminMatchers() {
+    static RequestMatcher[] adminMatchers() {
         return new RequestMatcher[] {
                 matcher(POST, "/products/category"),
                 matcher(DELETE, "/products/category/{categoryId}"),
@@ -61,7 +62,7 @@ public class SecurityConfig {
         };
     }
 
-    private static RequestMatcher[] allMatchers() {
+    static RequestMatcher[] allMatchers() {
         return new RequestMatcher[] {
                 matcher(GET, "/auth/csrf"),
                 matcher(POST, "/auth/login"),
@@ -77,7 +78,7 @@ public class SecurityConfig {
         };
     }
 
-    private static RequestMatcher[] buyerMatchers() {
+    static RequestMatcher[] buyerMatchers() {
         return new RequestMatcher[]{
                 matcher("/cart-items/{*path}"),
 
@@ -95,7 +96,7 @@ public class SecurityConfig {
         };
     }
 
-    private static RequestMatcher[] sellerMatchers() {
+    static RequestMatcher[] sellerMatchers() {
         return new RequestMatcher[] {
                 matcher(POST, "/products"),
                 matcher(PATCH, "/products/{*path}"),
@@ -108,7 +109,7 @@ public class SecurityConfig {
         };
     }
 
-    private static RequestMatcher[] userMatchers() {
+    static RequestMatcher[] userMatchers() {
         return new RequestMatcher[] {
                 matcher(GET, "/users/{userId}"),
                 matcher("/users/me/{*path}"),
@@ -126,6 +127,21 @@ public class SecurityConfig {
         // 모니터링 기능수행 외의 actuator용 포트 접근은 인프라 설정에서 막아둠
         http
                 .securityMatcher(EndpointRequest.toAnyEndpoint())
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll()
+                )
+                .csrf(csrf -> csrf.disable());
+
+        return http.build();
+    }
+
+    // API 명세와 Swagger UI. springdoc을 켠 프로필(local)에서만 등록한다
+    @Bean
+    @Order(1)
+    @ConditionalOnBooleanProperty("springdoc.api-docs.enabled")
+    SecurityFilterChain apiDocsSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/v3/api-docs/**", "/v3/api-docs.yaml", "/swagger-ui/**", "/swagger-ui.html")
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll()
                 )

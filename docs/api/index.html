@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ecommerce API</title>
+  <!-- Swagger UI 버전은 springdoc이 쓰는 버전에 맞춘다. 버전을 바꾸면 integrity 해시도 다시 계산한다 -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.32.2/swagger-ui.css"
+        integrity="sha384-F7uqyyVZgBbuOv+8gNy6ZGJB8Rf12CczPWm130Pxrau0cyZlj1Dl18cDOWpQSrGh"
+        crossorigin="anonymous">
+  <style>
+    body { margin: 0; background: #fff; }
+  </style>
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.32.2/swagger-ui-bundle.js"
+        integrity="sha384-phexB4pLDnmX1PhMxW3Ojwp92jIrirblcgNHltMum/KEQzYuBelzyulhx5ALflmy"
+        crossorigin="anonymous"></script>
+<script>
+  // 같은 폴더의 openapi.yaml을 보여 주기만 한다. 호출할 서버가 없으므로 Try it out을 끈다
+  window.ui = SwaggerUIBundle({
+    url: 'openapi.yaml',
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    tagsSorter: 'alpha',
+    supportedSubmitMethods: []
+  });
+</script>
+</body>
+</html>

@@ -2,16 +2,17 @@ package com.ecommerce.api.review.dto;
 
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.common.exception.ErrorCode;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 public record SearchReq(
         @NotNull(message = "리뷰 검색 기준은 필수입니다.") SearchBy searchBy,
-        Long productId,
-        Long writerId,
-        @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
-        Integer size
+        @Schema(description = "`searchBy`가 `PRODUCT`이면 필요하다") Long productId,
+        @Schema(description = "`searchBy`가 `WRITER`이면 필요하다") Long writerId,
+        @Schema(defaultValue = "0") @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
+        @Schema(defaultValue = "20", allowableValues = {"20", "50", "100"}) Integer size
 ) {
     public SearchReq {
         if ((searchBy == SearchBy.PRODUCT && productId == null) ||
@@ -23,6 +24,7 @@ public record SearchReq(
         if (size == null) size = 20;
     }
 
+    @Schema(hidden = true)
     @AssertTrue(message = "페이지 크기는 20, 50, 100 중 하나여야 합니다.")
     public boolean isSizeAllowed() {
         return size == 20 || size == 50 || size == 100;

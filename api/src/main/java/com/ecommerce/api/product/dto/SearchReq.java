@@ -3,16 +3,17 @@ package com.ecommerce.api.product.dto;
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.common.exception.ErrorCode;
 import com.ecommerce.api.product.enums.SortType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 
 public record SearchReq(
         String keyword,
         Long categoryId,
         Long sellerId,
-        @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
-        @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") Integer size,
-        SortType sortBy,
-        SortDirection direction
+        @Schema(defaultValue = "0") @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
+        @Schema(defaultValue = "20", allowableValues = {"20", "50", "100"}) @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") Integer size,
+        @Schema(defaultValue = "REG_DATE") SortType sortBy,
+        @Schema(defaultValue = "DESC") SortDirection direction
 ) {
     public SearchReq {
         if (page == null) page = 0;

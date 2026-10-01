@@ -1,0 +1,2612 @@
+openapi: 3.1.0
+info:
+  description: |
+    오픈마켓형 이커머스 REST API. 이 명세는 컨트롤러와 DTO에서 생성된다.
+
+    - 세션·CSRF 절차, 주문 생성의 멱등 키, 오류 응답 형식과 공통 오류 매핑: [contracts.md](https://github.com/EhighG/Ecommerce-API/blob/develop/docs/contracts.md)
+    - 역할별 권한과 소유자 검사: [security.md](https://github.com/EhighG/Ecommerce-API/blob/develop/docs/security.md)의 "인가 규칙"
+    - 엔드포인트마다 적은 오류는 클라이언트가 분기할 업무 오류다. 오류 응답의 `message`는 예시이고, 같은 `code`라도 더 구체적인 문장이 올 수 있다. 분기는 HTTP 상태와 `code`로만 한다.
+
+    **Try it out(로컬 서버)**
+    1. `GET /auth/csrf`를 실행하고 응답의 `token`을 복사한다.
+    2. Authorize에서 `csrf`(`X-CSRF-TOKEN` 헤더)에 그 값을 넣는다.
+    3. `POST /auth/login`으로 로그인한다. 세션 쿠키는 브라우저가 보낸다.
+
+    로그아웃하거나 세션이 만료되면 1부터 다시 한다.
+  title: Ecommerce API
+  version: v1
+servers:
+- description: 로컬 서버
+  url: http://localhost:8081/api
+tags:
+- description: "세션, CSRF 토큰, 로그인·로그아웃"
+  name: Auth
+- description: 장바구니
+  name: Cart
+- description: 쿠폰 이벤트와 발급
+  name: Coupon
+- description: 이미지 업로드
+  name: Media
+- description: 주문
+  name: Order
+- description: 주문항목 조회와 상태 변경
+  name: OrderItem
+- description: "상품, 카테고리, 재고"
+  name: Product
+- description: 리뷰
+  name: Review
+- description: "가입, 프로필, 회원 정보, 탈퇴"
+  name: User
+paths:
+  /auth/csrf:
+    get:
+      description: "세션이 없으면 만들고, 상태 변경 요청에 넣을 CSRF 헤더 이름과 토큰을 준다."
+      operationId: auth_getCsrfToken
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCsrfTokenRes"
+          description: OK
+      summary: 세션 생성과 CSRF 토큰 발급
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      description: 현재 세션을 인증한다.
+      operationId: auth_login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginReq"
+        required: true
+      responses:
+        "200":
+          description: 로그인 성공. 본문 없음
+        "401":
+          description: "로그인 실패. 본문 없음. 없는 이메일, 틀린 비밀번호, 탈퇴한 사용자를 구분하지 않는다"
+      security:
+      - csrf: []
+      summary: 로그인
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      description: 세션을 무효화한다.
+      operationId: auth_logout
+      responses:
+        "200":
+          description: 본문 없음
+      security:
+      - csrf: []
+      summary: 로그아웃
+      tags:
+      - Auth
+  /cart-items:
+    get:
+      operationId: cartItem_findCartItems
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CartItemListRes"
+          description: OK
+      summary: 내 장바구니
+      tags:
+      - Cart
+    post:
+      description: 이미 담긴 상품이면 수량을 더한다. 응답은 장바구니 항목 ID다.
+      operationId: cartItem_addItem
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddItemReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "2000":
+                  summary: 2000 없거나 삭제된 상품
+                  value:
+                    code: "2000"
+                    message: 상품을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2000`: 없거나 삭제된 상품"
+        "409":
+          content:
+            application/json:
+              examples:
+                "7001":
+                  summary: 7001 같은 상품을 동시에 담아 충돌함. 다시 시도한다
+                  value:
+                    code: "7001"
+                    message: 장바구니 항목이 이미 변경되었습니다. 잠시 후 다시 시도해주세요.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `7001`: 같은 상품을 동시에 담아 충돌함. 다시 시도한다"
+      security:
+      - csrf: []
+      summary: 장바구니에 담기
+      tags:
+      - Cart
+  /cart-items/quantity:
+    patch:
+      description: 장바구니 항목 ID가 아니라 상품 ID로 항목을 찾는다.
+      operationId: cartItem_changeQuantity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeQuantityReq"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "7000":
+                  summary: 7000 그 상품이 장바구니에 없음
+                  value:
+                    code: "7000"
+                    message: 장바구니 항목을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `7000`: 그 상품이 장바구니에 없음"
+      security:
+      - csrf: []
+      summary: 장바구니 수량 변경
+      tags:
+      - Cart
+  /cart-items/{cartItemId}:
+    delete:
+      operationId: cartItem_removeItem
+      parameters:
+      - in: path
+        name: cartItemId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "7000":
+                  summary: 7000 없거나 남의 항목
+                  value:
+                    code: "7000"
+                    message: 장바구니 항목을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `7000`: 없거나 남의 항목"
+      security:
+      - csrf: []
+      summary: 장바구니 항목 삭제
+      tags:
+      - Cart
+  /coupons/events:
+    post:
+      description: 응답은 이벤트 ID다.
+      operationId: coupon_createCouponEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCouponEventReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+          description: OK
+      security:
+      - csrf: []
+      summary: 쿠폰 이벤트 생성
+      tags:
+      - Coupon
+  /coupons/events/{couponEventId}:
+    get:
+      operationId: coupon_getCouponEventDetail
+      parameters:
+      - in: path
+        name: couponEventId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponEventDetailRes"
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "7500":
+                  summary: 7500 이벤트가 없음
+                  value:
+                    code: "7500"
+                    message: 쿠폰 이벤트를 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `7500`: 이벤트가 없음"
+      summary: 쿠폰 이벤트 조회
+      tags:
+      - Coupon
+  /coupons/events/{couponEventId}/issue:
+    post:
+      description: 응답의 `couponIssuedId`를 주문할 때 쓴다.
+      operationId: coupon_issueCoupon
+      parameters:
+      - in: path
+        name: couponEventId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueCouponRes"
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "7503":
+                  summary: 7503 발급 기간이 아님
+                  value:
+                    code: "7503"
+                    message: 진행 중인 쿠폰 이벤트가 아닙니다.
+                "7506":
+                  summary: 7506 이미 이 이벤트의 쿠폰을 받음
+                  value:
+                    code: "7506"
+                    message: 이미 발급받은 쿠폰입니다.
+                "7507":
+                  summary: 7507 수량이 모두 소진됨
+                  value:
+                    code: "7507"
+                    message: 쿠폰이 모두 소진되었습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `7503`: 발급 기간이 아님
+            - `7506`: 이미 이 이벤트의 쿠폰을 받음
+            - `7507`: 수량이 모두 소진됨
+      security:
+      - csrf: []
+      summary: 쿠폰 발급(선착순)
+      tags:
+      - Coupon
+  /media/upload-complete:
+    post:
+      description: GCS에 올린 객체를 내 이미지로 등록한다. 응답의 `imageId`를 상품 등록과 이미지 교체에 쓴다.
+      operationId: media_completeUpload
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteUploadReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompleteUploadRes"
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "8001":
+                  summary: 8001 올린 객체가 이미지가 아님
+                  value:
+                    code: "8001"
+                    message: 이미지 파일만 업로드할 수 있습니다.
+                "8002":
+                  summary: 8002 다른 사람이 이미 등록한 경로
+                  value:
+                    code: "8002"
+                    message: 해당 이미지에 대한 권한이 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `8001`: 올린 객체가 이미지가 아님
+            - `8002`: 다른 사람이 이미 등록한 경로
+        "404":
+          content:
+            application/json:
+              examples:
+                "8000":
+                  summary: 8000 GCS에 객체가 없음
+                  value:
+                    code: "8000"
+                    message: 업로드된 파일을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `8000`: GCS에 객체가 없음"
+      security:
+      - csrf: []
+      summary: 업로드 완료 등록
+      tags:
+      - Media
+  /media/upload-url:
+    post:
+      description: "응답의 `uploadUrl`로 GCS에 직접 `PUT`한 뒤 `POST /media/upload-complete`로\
+        \ 등록한다. 업로드 조건은 [business-rules.md](https://github.com/EhighG/Ecommerce-API/blob/develop/docs/business-rules.md)의\
+        \ 이미지 업로드 절에 있다. 조건이 맞지 않거나 URL이 만료되면 GCS가 403을 준다."
+      operationId: media_createImageUploadUrl
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUploadUrlReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateUploadUrlRes"
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "8001":
+                  summary: 8001 `contentType`이 이미지가 아님
+                  value:
+                    code: "8001"
+                    message: 이미지 파일만 업로드할 수 있습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `8001`: `contentType`이 이미지가 아님"
+      security:
+      - csrf: []
+      summary: 업로드 URL 발급
+      tags:
+      - Media
+  /media/uploaded-images:
+    get:
+      operationId: media_getUploadedImageInfoList
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UploadedImageListRes"
+          description: OK
+      summary: 업로드 이미지 목록
+      tags:
+      - Media
+  /order-items:
+    get:
+      description: '`orderId`와 `sellerId` 중 하나만 준다. 둘의 응답 형태가 다르다.'
+      operationId: orderItem_findOrderItems
+      parameters:
+      - description: 이 주문의 항목을 조회한다(구매자). `sellerId`와 함께 줄 수 없다
+        in: query
+        name: orderId
+        required: false
+        schema:
+          type: integer
+          format: int64
+          description: 이 주문의 항목을 조회한다(구매자). `sellerId`와 함께 줄 수 없다
+      - description: 본인 ID. 자기 상품의 주문항목을 조회한다(판매자)
+        in: query
+        name: sellerId
+        required: false
+        schema:
+          type: integer
+          format: int64
+          description: 본인 ID. 자기 상품의 주문항목을 조회한다(판매자)
+      - description: '`sellerId`로 조회할 때만 쓴다'
+        in: query
+        name: statusList
+        required: false
+        schema:
+          type: array
+          description: '`sellerId`로 조회할 때만 쓴다'
+          items:
+            type: string
+            description: '`sellerId`로 조회할 때만 쓴다'
+            enum:
+            - ORDERED
+            - SHIPPED
+            - DELIVERED
+            - PURCHASE_CONFIRMED
+            - CANCELED
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - in: query
+        name: size
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          enum:
+          - 20
+          - 50
+          - 100
+          minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/BuyerOrderItemSearchRes"
+                - $ref: "#/components/schemas/SellerOrderItemSearchRes"
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "0001":
+                  summary: 0001 조회 방식이 역할과 맞지 않음
+                  value:
+                    code: "0001"
+                    message: 요청한 리소스를 찾을 수 없습니다.
+                "3000":
+                  summary: 3000 주문이 없거나 남의 주문
+                  value:
+                    code: "3000"
+                    message: 주문을 찾을 수 없습니다.
+                "3001":
+                  summary: 3001 `sellerId`가 본인이 아님
+                  value:
+                    code: "3001"
+                    message: 주문을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `0001`: 조회 방식이 역할과 맞지 않음
+            - `3000`: 주문이 없거나 남의 주문
+            - `3001`: `sellerId`가 본인이 아님
+      summary: 주문항목 목록
+      tags:
+      - OrderItem
+  /order-items/{orderItemId}:
+    get:
+      operationId: orderItem_getOrderItemDetail
+      parameters:
+      - in: path
+        name: orderItemId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderItemDetailRes"
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "3001":
+                  summary: 3001 구매자나 그 상품의 판매자가 아님
+                  value:
+                    code: "3001"
+                    message: 주문을 찾을 수 없습니다.
+                "3002":
+                  summary: 3002 주문항목이 없음
+                  value:
+                    code: "3002"
+                    message: 주문 항목을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `3002`: 주문항목이 없음
+            - `3001`: 구매자나 그 상품의 판매자가 아님
+      summary: 주문항목 상세
+      tags:
+      - OrderItem
+  /order-items/{orderItemId}/cancel:
+    patch:
+      description: 이미 취소된 항목이면 아무것도 바꾸지 않고 200을 준다.
+      operationId: orderItem_cancel
+      parameters:
+      - in: path
+        name: orderItemId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "3003":
+                  summary: 3003 지금 상태에서 할 수 없는 변경
+                  value:
+                    code: "3003"
+                    message: 현재 주문 상태에서는 처리할 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `3003`: 지금 상태에서 할 수 없는 변경"
+        "404":
+          content:
+            application/json:
+              examples:
+                "3001":
+                  summary: 3001 구매자나 그 상품의 판매자가 아님
+                  value:
+                    code: "3001"
+                    message: 주문을 찾을 수 없습니다.
+                "3002":
+                  summary: 3002 주문항목이 없음
+                  value:
+                    code: "3002"
+                    message: 주문 항목을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `3002`: 주문항목이 없음
+            - `3001`: 구매자나 그 상품의 판매자가 아님
+        "409":
+          content:
+            application/json:
+              examples:
+                "3004":
+                  summary: 3004 다른 요청이 먼저 상태를 바꿈. 새로고침한 뒤 다시 시도한다
+                  value:
+                    code: "3004"
+                    message: 주문 상태가 변경되었습니다. 새로고침 후 다시 시도해주세요.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `3004`: 다른 요청이 먼저 상태를 바꿈. 새로고침한 뒤 다시 시도한다"
+      security:
+      - csrf: []
+      summary: 주문항목 취소
+      tags:
+      - OrderItem
+  /order-items/{orderItemId}/confirm:
+    patch:
+      operationId: orderItem_confirm
+      parameters:
+      - in: path
+        name: orderItemId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "3003":
+                  summary: 3003 지금 상태에서 할 수 없는 변경
+                  value:
+                    code: "3003"
+                    message: 현재 주문 상태에서는 처리할 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `3003`: 지금 상태에서 할 수 없는 변경"
+        "404":
+          content:
+            application/json:
+              examples:
+                "3001":
+                  summary: 3001 주문자가 아님
+                  value:
+                    code: "3001"
+                    message: 주문을 찾을 수 없습니다.
+                "3002":
+                  summary: 3002 주문항목이 없음
+                  value:
+                    code: "3002"
+                    message: 주문 항목을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `3002`: 주문항목이 없음
+            - `3001`: 주문자가 아님
+        "409":
+          content:
+            application/json:
+              examples:
+                "3004":
+                  summary: 3004 다른 요청이 먼저 상태를 바꿈. 새로고침한 뒤 다시 시도한다
+                  value:
+                    code: "3004"
+                    message: 주문 상태가 변경되었습니다. 새로고침 후 다시 시도해주세요.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `3004`: 다른 요청이 먼저 상태를 바꿈. 새로고침한 뒤 다시 시도한다"
+      security:
+      - csrf: []
+      summary: 구매확정
+      tags:
+      - OrderItem
+  /order-items/{orderItemId}/deliver:
+    patch:
+      operationId: orderItem_deliver
+      parameters:
+      - in: path
+        name: orderItemId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "3003":
+                  summary: 3003 지금 상태에서 할 수 없는 변경
+                  value:
+                    code: "3003"
+                    message: 현재 주문 상태에서는 처리할 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `3003`: 지금 상태에서 할 수 없는 변경"
+        "404":
+          content:
+            application/json:
+              examples:
+                "3001":
+                  summary: 3001 그 상품의 판매자가 아님
+                  value:
+                    code: "3001"
+                    message: 주문을 찾을 수 없습니다.
+                "3002":
+                  summary: 3002 주문항목이 없음
+                  value:
+                    code: "3002"
+                    message: 주문 항목을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `3002`: 주문항목이 없음
+            - `3001`: 그 상품의 판매자가 아님
+        "409":
+          content:
+            application/json:
+              examples:
+                "3004":
+                  summary: 3004 다른 요청이 먼저 상태를 바꿈. 새로고침한 뒤 다시 시도한다
+                  value:
+                    code: "3004"
+                    message: 주문 상태가 변경되었습니다. 새로고침 후 다시 시도해주세요.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `3004`: 다른 요청이 먼저 상태를 바꿈. 새로고침한 뒤 다시 시도한다"
+      security:
+      - csrf: []
+      summary: 배송 완료
+      tags:
+      - OrderItem
+  /order-items/{orderItemId}/ship:
+    patch:
+      operationId: orderItem_ship
+      parameters:
+      - in: path
+        name: orderItemId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "3003":
+                  summary: 3003 지금 상태에서 할 수 없는 변경
+                  value:
+                    code: "3003"
+                    message: 현재 주문 상태에서는 처리할 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `3003`: 지금 상태에서 할 수 없는 변경"
+        "404":
+          content:
+            application/json:
+              examples:
+                "3001":
+                  summary: 3001 그 상품의 판매자가 아님
+                  value:
+                    code: "3001"
+                    message: 주문을 찾을 수 없습니다.
+                "3002":
+                  summary: 3002 주문항목이 없음
+                  value:
+                    code: "3002"
+                    message: 주문 항목을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `3002`: 주문항목이 없음
+            - `3001`: 그 상품의 판매자가 아님
+        "409":
+          content:
+            application/json:
+              examples:
+                "3004":
+                  summary: 3004 다른 요청이 먼저 상태를 바꿈. 새로고침한 뒤 다시 시도한다
+                  value:
+                    code: "3004"
+                    message: 주문 상태가 변경되었습니다. 새로고침 후 다시 시도해주세요.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `3004`: 다른 요청이 먼저 상태를 바꿈. 새로고침한 뒤 다시 시도한다"
+      security:
+      - csrf: []
+      summary: 배송 시작
+      tags:
+      - OrderItem
+  /orders:
+    post:
+      description: "장바구니 항목으로 주문한다. 응답은 주문 ID다. 멱등 키를 만들고 재시도하는 방법은 [contracts.md](https://github.com/EhighG/Ecommerce-API/blob/develop/docs/contracts.md)의\
+        \ 주문 생성의 멱등 키 절에 있다."
+      operationId: order_order
+      parameters:
+      - description: "규칙은 [contracts.md](https://github.com/EhighG/Ecommerce-API/blob/develop/docs/contracts.md)의\
+          \ 주문 생성의 멱등 키 절에 있다."
+        in: header
+        name: Idempotency-Key
+        required: true
+        schema:
+          type: string
+          example: 3f1e9a2c-7b4d-4c1e-9f0a-2b6c8d1e5a70
+          pattern: "^[A-Za-z0-9._:-]{1,128}$"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "2004":
+                  summary: 2004 상품 삭제와 주문이 동시에 일어남
+                  value:
+                    code: "2004"
+                    message: 삭제된 상품입니다.
+                "2501":
+                  summary: 2501 재고가 모자람
+                  value:
+                    code: "2501"
+                    message: 주문 가능한 재고가 부족합니다.
+                "7501":
+                  summary: "7501 쓸 수 없는 쿠폰(이미 사용, 만료)"
+                  value:
+                    code: "7501"
+                    message: 사용할 수 없는 쿠폰입니다.
+                "7509":
+                  summary: 7509 같은 쿠폰을 두 번 씀
+                  value:
+                    code: "7509"
+                    message: 같은 쿠폰은 중복 사용할 수 없습니다.
+                "9001":
+                  summary: 9001 한 주문에 같은 장바구니 항목이 두 번 있음
+                  value:
+                    code: "9001"
+                    message: 요청 값이 올바르지 않습니다.
+                "9100":
+                  summary: 9100 `Idempotency-Key` 헤더가 없음
+                  value:
+                    code: "9100"
+                    message: Idempotency-Key 헤더가 없습니다.
+                "9101":
+                  summary: 9101 `Idempotency-Key` 형식이 틀림
+                  value:
+                    code: "9101"
+                    message: Idempotency-Key 형식이 올바르지 않습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `9100`: `Idempotency-Key` 헤더가 없음
+            - `9101`: `Idempotency-Key` 형식이 틀림
+            - `9001`: 한 주문에 같은 장바구니 항목이 두 번 있음
+            - `9001`: 할인액이 0원이 되는 쿠폰을 씀. 메시지는 경우마다 다르다
+            - `2004`: 상품 삭제와 주문이 동시에 일어남
+            - `7509`: 같은 쿠폰을 두 번 씀
+            - `7501`: 쓸 수 없는 쿠폰(이미 사용, 만료)
+            - `2501`: 재고가 모자람
+        "404":
+          content:
+            application/json:
+              examples:
+                "7000":
+                  summary: 7000 장바구니 항목이 없거나 남의 항목. 상품을 삭제하면 장바구니 항목도 지워지므로 삭제된 상품도
+                    대개 이 코드다
+                  value:
+                    code: "7000"
+                    message: 장바구니 항목을 찾을 수 없습니다.
+                "7510":
+                  summary: 7510 쿠폰이 없거나 남의 쿠폰
+                  value:
+                    code: "7510"
+                    message: 해당 쿠폰을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `7000`: 장바구니 항목이 없거나 남의 항목. 상품을 삭제하면 장바구니 항목도 지워지므로 삭제된 상품도 대개 이 코드다
+            - `7510`: 쿠폰이 없거나 남의 쿠폰
+        "409":
+          content:
+            application/json:
+              examples:
+                "9102":
+                  summary: 9102 같은 키로 다른 내용을 보냄
+                  value:
+                    code: "9102"
+                    message: 같은 Idempotency-Key로 다른 요청을 보낼 수 없습니다.
+                "9103":
+                  summary: 9103 같은 키의 요청이 처리 중. 잠시 후 같은 키로 다시 보낸다
+                  value:
+                    code: "9103"
+                    message: 동일한 요청이 이미 처리 중입니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `9102`: 같은 키로 다른 내용을 보냄
+            - `9103`: 같은 키의 요청이 처리 중. 잠시 후 같은 키로 다시 보낸다
+      security:
+      - csrf: []
+      summary: 주문 생성
+      tags:
+      - Order
+  /orders/me:
+    get:
+      operationId: order_findMyOrders
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderListRes"
+          description: OK
+      summary: 내 주문 목록
+      tags:
+      - Order
+  /orders/{orderId}:
+    get:
+      operationId: order_getMyOrderDetail
+      parameters:
+      - in: path
+        name: orderId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetailRes"
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "3000":
+                  summary: 3000 주문이 없음
+                  value:
+                    code: "3000"
+                    message: 주문을 찾을 수 없습니다.
+                "3001":
+                  summary: 3001 남의 주문
+                  value:
+                    code: "3001"
+                    message: 주문을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `3000`: 주문이 없음
+            - `3001`: 남의 주문
+      summary: 주문 상세
+      tags:
+      - Order
+  /products:
+    get:
+      operationId: product_search
+      parameters:
+      - in: query
+        name: keyword
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: categoryId
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - in: query
+        name: sellerId
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - in: query
+        name: size
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          enum:
+          - 20
+          - 50
+          - 100
+          minimum: 1
+      - in: query
+        name: sortBy
+        required: false
+        schema:
+          type: string
+          default: REG_DATE
+          enum:
+          - ORDER_COUNT
+          - RATING
+          - VIEW_COUNT
+          - PRICE
+          - REG_DATE
+      - in: query
+        name: direction
+        required: false
+        schema:
+          type: string
+          default: DESC
+          enum:
+          - ASC
+          - DESC
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductSearchRes"
+          description: OK
+      summary: 상품 목록·검색
+      tags:
+      - Product
+    post:
+      description: 응답은 상품 ID다.
+      operationId: product_register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterProductReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "2001":
+                  summary: 2001 카테고리가 없음
+                  value:
+                    code: "2001"
+                    message: 상품 카테고리를 찾을 수 없습니다.
+                "8004":
+                  summary: 8004 이미 다른 상품에 붙은 이미지
+                  value:
+                    code: "8004"
+                    message: 이미 상품에 등록된 이미지입니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `2001`: 카테고리가 없음
+            - `8004`: 이미 다른 상품에 붙은 이미지
+        "404":
+          content:
+            application/json:
+              examples:
+                "8003":
+                  summary: 8003 이미지가 없거나 남이 올린 이미지
+                  value:
+                    code: "8003"
+                    message: 이미지를 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `8003`: 이미지가 없거나 남이 올린 이미지"
+      security:
+      - csrf: []
+      summary: 상품 등록
+      tags:
+      - Product
+  /products/category:
+    get:
+      operationId: product_getCategories
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategorySummary"
+          description: OK
+      summary: 카테고리 목록
+      tags:
+      - Product
+    post:
+      description: 응답은 카테고리 ID다.
+      operationId: product_addCategory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCategoryReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+          description: OK
+        "409":
+          content:
+            application/json:
+              examples:
+                "2005":
+                  summary: 2005 같은 이름의 카테고리가 있음
+                  value:
+                    code: "2005"
+                    message: 이미 존재하는 상품 카테고리입니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2005`: 같은 이름의 카테고리가 있음"
+      security:
+      - csrf: []
+      summary: 카테고리 생성
+      tags:
+      - Product
+  /products/category/{categoryId}:
+    delete:
+      operationId: product_deleteCategory
+      parameters:
+      - in: path
+        name: categoryId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "2001":
+                  summary: 2001 카테고리가 없음
+                  value:
+                    code: "2001"
+                    message: 상품 카테고리를 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2001`: 카테고리가 없음"
+        "500":
+          content:
+            application/json:
+              examples:
+                "9999":
+                  summary: 9999 카테고리에 걸린 상품이 있음(삭제된 상품 포함)
+                  value:
+                    code: "9999"
+                    message: 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `9999`: 카테고리에 걸린 상품이 있음(삭제된 상품 포함)"
+      security:
+      - csrf: []
+      summary: 카테고리 삭제
+      tags:
+      - Product
+  /products/inventory:
+    patch:
+      description: 재고를 바뀐 뒤의 수량으로 바꾼다.
+      operationId: inventory_modifyInventory
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyInventoryReq"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "2004":
+                  summary: 2004 삭제된 상품
+                  value:
+                    code: "2004"
+                    message: 삭제된 상품입니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2004`: 삭제된 상품"
+        "403":
+          content:
+            application/json:
+              examples:
+                "2002":
+                  summary: 2002 내 상품이 아님
+                  value:
+                    code: "2002"
+                    message: 해당 상품에 대한 권한이 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2002`: 내 상품이 아님"
+      security:
+      - csrf: []
+      summary: 재고 수정
+      tags:
+      - Product
+  /products/{productId}:
+    delete:
+      operationId: product_deleteProduct
+      parameters:
+      - in: path
+        name: productId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+        "403":
+          content:
+            application/json:
+              examples:
+                "2002":
+                  summary: 2002 내 상품이 아님
+                  value:
+                    code: "2002"
+                    message: 해당 상품에 대한 권한이 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2002`: 내 상품이 아님"
+        "404":
+          content:
+            application/json:
+              examples:
+                "2000":
+                  summary: 2000 없거나 삭제된 상품
+                  value:
+                    code: "2000"
+                    message: 상품을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2000`: 없거나 삭제된 상품"
+      security:
+      - csrf: []
+      summary: 상품 삭제
+      tags:
+      - Product
+    get:
+      description: 조회할 때마다 조회수가 1 오른다.
+      operationId: product_getProductDetail
+      parameters:
+      - in: path
+        name: productId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetailRes"
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "2000":
+                  summary: 2000 없거나 삭제된 상품
+                  value:
+                    code: "2000"
+                    message: 상품을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2000`: 없거나 삭제된 상품"
+      summary: 상품 상세
+      tags:
+      - Product
+    patch:
+      operationId: product_modifyProduct
+      parameters:
+      - in: path
+        name: productId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyProductReq"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "403":
+          content:
+            application/json:
+              examples:
+                "2002":
+                  summary: 2002 내 상품이 아님
+                  value:
+                    code: "2002"
+                    message: 해당 상품에 대한 권한이 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2002`: 내 상품이 아님"
+        "404":
+          content:
+            application/json:
+              examples:
+                "2000":
+                  summary: 2000 없거나 삭제된 상품
+                  value:
+                    code: "2000"
+                    message: 상품을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2000`: 없거나 삭제된 상품"
+      security:
+      - csrf: []
+      summary: 상품 설명·단가 수정
+      tags:
+      - Product
+  /products/{productId}/images:
+    patch:
+      operationId: product_replaceProductImages
+      parameters:
+      - in: path
+        name: productId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplaceProductImagesReq"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "8004":
+                  summary: 8004 이미 다른 상품에 붙은 이미지
+                  value:
+                    code: "8004"
+                    message: 이미 상품에 등록된 이미지입니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `8004`: 이미 다른 상품에 붙은 이미지"
+        "403":
+          content:
+            application/json:
+              examples:
+                "2002":
+                  summary: 2002 내 상품이 아님
+                  value:
+                    code: "2002"
+                    message: 해당 상품에 대한 권한이 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2002`: 내 상품이 아님"
+        "404":
+          content:
+            application/json:
+              examples:
+                "2000":
+                  summary: 2000 없거나 삭제된 상품
+                  value:
+                    code: "2000"
+                    message: 상품을 찾을 수 없습니다.
+                "8003":
+                  summary: 8003 이미지가 없거나 남이 올린 이미지
+                  value:
+                    code: "8003"
+                    message: 이미지를 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `8003`: 이미지가 없거나 남이 올린 이미지
+            - `2000`: 없거나 삭제된 상품
+      security:
+      - csrf: []
+      summary: 상품 이미지 목록 교체
+      tags:
+      - Product
+  /products/{productId}/reviews:
+    post:
+      description: 응답은 리뷰 ID다.
+      operationId: review_write
+      parameters:
+      - in: path
+        name: productId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WriteReviewReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+          description: OK
+        "403":
+          content:
+            application/json:
+              examples:
+                "6001":
+                  summary: 6001 이 상품을 구매확정한 주문항목이 없음
+                  value:
+                    code: "6001"
+                    message: 구매 확정한 상품에만 리뷰를 작성할 수 있습니다.
+                "6002":
+                  summary: 6002 이미 이 상품에 리뷰를 씀
+                  value:
+                    code: "6002"
+                    message: 이미 리뷰를 작성한 상품입니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `6001`: 이 상품을 구매확정한 주문항목이 없음
+            - `6002`: 이미 이 상품에 리뷰를 씀
+        "404":
+          content:
+            application/json:
+              examples:
+                "2000":
+                  summary: 2000 없거나 삭제된 상품
+                  value:
+                    code: "2000"
+                    message: 상품을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2000`: 없거나 삭제된 상품"
+      security:
+      - csrf: []
+      summary: 리뷰 작성
+      tags:
+      - Review
+  /reviews:
+    get:
+      description: "`searchBy`가 `PRODUCT`이면 상품 기준, `WRITER`이면 작성자 기준으로 조회한다."
+      operationId: review_search
+      parameters:
+      - in: query
+        name: searchBy
+        required: true
+        schema:
+          type: string
+          enum:
+          - PRODUCT
+          - WRITER
+      - description: '`searchBy`가 `PRODUCT`이면 필요하다'
+        in: query
+        name: productId
+        required: false
+        schema:
+          type: integer
+          format: int64
+          description: '`searchBy`가 `PRODUCT`이면 필요하다'
+      - description: '`searchBy`가 `WRITER`이면 필요하다'
+        in: query
+        name: writerId
+        required: false
+        schema:
+          type: integer
+          format: int64
+          description: '`searchBy`가 `WRITER`이면 필요하다'
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - in: query
+        name: size
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          enum:
+          - 20
+          - 50
+          - 100
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewSearchRes"
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "1000":
+                  summary: 1000 없거나 탈퇴한 작성자
+                  value:
+                    code: "1000"
+                    message: 사용자를 찾을 수 없습니다.
+                "2000":
+                  summary: 2000 없거나 삭제된 상품
+                  value:
+                    code: "2000"
+                    message: 상품을 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `2000`: 없거나 삭제된 상품
+            - `1000`: 없거나 탈퇴한 작성자
+      summary: 리뷰 목록
+      tags:
+      - Review
+  /reviews/{reviewId}:
+    patch:
+      description: 별점과 내용을 통째로 바꾼다.
+      operationId: review_modify
+      parameters:
+      - in: path
+        name: reviewId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyReviewReq"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "400":
+          content:
+            application/json:
+              examples:
+                "2004":
+                  summary: 2004 삭제된 상품의 리뷰
+                  value:
+                    code: "2004"
+                    message: 삭제된 상품입니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `2004`: 삭제된 상품의 리뷰"
+        "404":
+          content:
+            application/json:
+              examples:
+                "6000":
+                  summary: 6000 리뷰가 없음
+                  value:
+                    code: "6000"
+                    message: 리뷰를 찾을 수 없습니다.
+                "6003":
+                  summary: 6003 남의 리뷰
+                  value:
+                    code: "6003"
+                    message: 리뷰를 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: |-
+            - `6000`: 리뷰가 없음
+            - `6003`: 남의 리뷰
+      security:
+      - csrf: []
+      summary: 리뷰 수정
+      tags:
+      - Review
+  /users:
+    get:
+      operationId: user_getUserInfoList
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserInfoListRes"
+          description: OK
+      summary: 회원 목록
+      tags:
+      - User
+    post:
+      description: 응답은 사용자 ID다.
+      operationId: user_join
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinReq"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+          description: OK
+        "409":
+          content:
+            application/json:
+              examples:
+                "1001":
+                  summary: 1001 이미 쓰는 이메일. 탈퇴한 사용자의 이메일도 포함한다
+                  value:
+                    code: "1001"
+                    message: 이미 사용 중인 이메일입니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `1001`: 이미 쓰는 이메일. 탈퇴한 사용자의 이메일도 포함한다"
+      security:
+      - csrf: []
+      summary: 가입
+      tags:
+      - User
+  /users/me:
+    get:
+      operationId: user_getMyProfile
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileRes"
+          description: OK
+      summary: 내 프로필
+      tags:
+      - User
+    patch:
+      operationId: user_modifyInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyInfoReq"
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - csrf: []
+      summary: 닉네임 변경
+      tags:
+      - User
+  /users/me/password:
+    patch:
+      description: 성공하면 현재 세션이 로그아웃된다.
+      operationId: user_modifyPassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyPasswordReq"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          content:
+            application/json:
+              examples:
+                "1003":
+                  summary: 1003 현재 비밀번호가 틀림
+                  value:
+                    code: "1003"
+                    message: 비밀번호가 일치하지 않습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `1003`: 현재 비밀번호가 틀림"
+      security:
+      - csrf: []
+      summary: 비밀번호 변경
+      tags:
+      - User
+  /users/me/withdraw:
+    post:
+      description: 성공하면 현재 세션이 로그아웃된다.
+      operationId: user_withdraw
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawReq"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          content:
+            application/json:
+              examples:
+                "1003":
+                  summary: 1003 비밀번호가 틀림
+                  value:
+                    code: "1003"
+                    message: 비밀번호가 일치하지 않습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `1003`: 비밀번호가 틀림"
+        "403":
+          content:
+            application/json:
+              examples:
+                "1004":
+                  summary: 1004 판매자의 상품에 주문완료나 배송중인 주문항목이 있음
+                  value:
+                    code: "1004"
+                    message: 진행중인 주문이 있어 탈퇴가 불가능합니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `1004`: 판매자의 상품에 주문완료나 배송중인 주문항목이 있음"
+      security:
+      - csrf: []
+      summary: 탈퇴
+      tags:
+      - User
+  /users/{userId}:
+    get:
+      operationId: user_getUserProfile
+      parameters:
+      - in: path
+        name: userId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileRes"
+          description: OK
+        "404":
+          content:
+            application/json:
+              examples:
+                "1000":
+                  summary: 1000 없거나 탈퇴한 사용자
+                  value:
+                    code: "1000"
+                    message: 사용자를 찾을 수 없습니다.
+              schema:
+                $ref: "#/components/schemas/ApiError"
+          description: "- `1000`: 없거나 탈퇴한 사용자"
+      summary: 사용자 프로필
+      tags:
+      - User
+components:
+  schemas:
+    AddCategoryReq:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 15
+          minLength: 0
+      required:
+      - name
+    AddItemReq:
+      type: object
+      properties:
+        productId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+      required:
+      - productId
+      - quantity
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    BuyerOrderItemSearchRes:
+      allOf:
+      - $ref: "#/components/schemas/OrderItemSearchRes"
+      - type: object
+        properties:
+          hasNext:
+            type: boolean
+          items:
+            type: array
+            items:
+              $ref: "#/components/schemas/OrderItemSummary"
+          page:
+            type: integer
+            format: int32
+          size:
+            type: integer
+            format: int32
+          totalCount:
+            type: integer
+            format: int64
+          totalPages:
+            type: integer
+            format: int32
+    CartItemListRes:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        linePrice:
+          type: integer
+          format: int64
+        product:
+          $ref: "#/components/schemas/ProductListRes"
+        quantity:
+          type: integer
+          format: int32
+    CategorySummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    ChangeQuantityReq:
+      type: object
+      properties:
+        productId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+      required:
+      - productId
+      - quantity
+    CompleteUploadReq:
+      type: object
+      properties:
+        objectKey:
+          type: string
+          description: 업로드 URL 발급 응답의 `objectKey`
+          minLength: 1
+      required:
+      - objectKey
+    CompleteUploadRes:
+      type: object
+      properties:
+        imageId:
+          type: integer
+          format: int64
+        imageUrl:
+          type: string
+        objectKey:
+          type: string
+    CouponEventDetailRes:
+      type: object
+      properties:
+        couponEventId:
+          type: integer
+          format: int64
+        discountValue:
+          type: integer
+          format: int64
+        endAt:
+          type: string
+          format: date-time
+        initialQuantity:
+          type: integer
+          format: int32
+        maxDiscountAmount:
+          type: integer
+          format: int64
+        name:
+          type: string
+        open:
+          type: boolean
+        remainingQuantity:
+          type: integer
+          format: int32
+          description: "남은 수량. 이벤트가 Redis에 올라가 있지 않으면 `null`이다. 발급 시작 10분 전보다 이를 때\
+            , 종료 10분 뒤부터, Redis를 잃고 다시 적재하기 전이 그렇다. 적재는 최대 30초 늦을 수 있다."
+        startAt:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum:
+          - FIXED_AMOUNT
+          - PERCENT
+        validSeconds:
+          type: integer
+          format: int64
+    CreateCouponEventReq:
+      type: object
+      properties:
+        discountValue:
+          type: integer
+          format: int64
+          description: "`FIXED_AMOUNT`이면 할인 금액(원), `PERCENT`이면 할인율(%)"
+        durationUnit:
+          type: string
+          enum:
+          - MINUTES
+          - HOURS
+          - DAYS
+        endAt:
+          type: string
+          description: "발급 종료 시각. `yyyy-MM-dd HH:mm:ss`, `timezone` 기준"
+          example: 2026-10-08 23:59:59
+          minLength: 1
+        initialQuantity:
+          type: integer
+          format: int32
+        maxDiscountAmount:
+          type: integer
+          format: int64
+          description: 할인액 상한(원)
+        name:
+          type: string
+          minLength: 1
+        startAt:
+          type: string
+          description: "발급 시작 시각. `yyyy-MM-dd HH:mm:ss`, `timezone` 기준"
+          example: 2026-10-01 10:00:00
+          minLength: 1
+        timezone:
+          type: string
+          description: IANA 시간대 ID. 비우면 `Asia/Seoul`
+          example: Asia/Seoul
+        type:
+          type: string
+          enum:
+          - FIXED_AMOUNT
+          - PERCENT
+        validDurationAmount:
+          type: integer
+          format: int64
+          description: 발급 시점부터 쿠폰을 쓸 수 있는 기간. 단위는 `durationUnit`
+      required:
+      - durationUnit
+      - endAt
+      - name
+      - startAt
+      - type
+    CreateUploadUrlReq:
+      type: object
+      properties:
+        contentType:
+          type: string
+          description: '`image/`로 시작해야 한다. GCS에 올릴 때 같은 값을 `Content-Type` 헤더로 보낸다'
+          example: image/png
+          minLength: 1
+        originalFileName:
+          type: string
+          description: 확장자만 쓴다
+          minLength: 1
+      required:
+      - contentType
+      - originalFileName
+    CreateUploadUrlRes:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+        objectKey:
+          type: string
+        uploadUrl:
+          type: string
+    GetCsrfTokenRes:
+      type: object
+      properties:
+        headerName:
+          type: string
+        paramName:
+          type: string
+        token:
+          type: string
+    ImageIdWithOrder:
+      type: object
+      properties:
+        imageId:
+          type: integer
+          format: int64
+          description: 업로드 완료 등록 응답의 `imageId`
+        order:
+          type: integer
+          format: int32
+          description: 표시 순서. 1이 썸네일이다
+          minimum: 1
+      required:
+      - imageId
+      - order
+    IssueCouponRes:
+      type: object
+      properties:
+        couponEventId:
+          type: integer
+          format: int64
+        couponIssuedId:
+          type: integer
+          format: int64
+        expiresAt:
+          type: string
+          format: date-time
+        issuedAt:
+          type: string
+          format: date-time
+    JoinReq:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        nickname:
+          type: string
+          maxLength: 20
+          minLength: 0
+        password:
+          type: string
+          description: "비밀번호는 8~12자이고, 영문·숫자·특수문자(!@#$%^&*) 중 2종류 이상을 써야 합니다."
+          minLength: 1
+        passwordCheck:
+          type: string
+          description: '`password`와 같아야 한다'
+          minLength: 1
+        role:
+          type: string
+          description: '`BUYER` 또는 `SELLER`. `ADMIN`은 거절한다'
+          enum:
+          - BUYER
+          - SELLER
+          - ADMIN
+      required:
+      - email
+      - nickname
+      - password
+      - passwordCheck
+      - role
+    LoginReq:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    ModifyInfoReq:
+      type: object
+      properties:
+        nickname:
+          type: string
+          minLength: 1
+      required:
+      - nickname
+    ModifyInventoryReq:
+      type: object
+      properties:
+        productId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - productId
+      - quantity
+    ModifyPasswordReq:
+      type: object
+      properties:
+        newPassword:
+          type: string
+          description: "비밀번호는 8~12자이고, 영문·숫자·특수문자(!@#$%^&*) 중 2종류 이상을 써야 합니다."
+          minLength: 1
+        oldPassword:
+          type: string
+          minLength: 1
+      required:
+      - newPassword
+      - oldPassword
+    ModifyProductReq:
+      type: object
+      description: 설명과 단가 중 하나 이상을 보낸다. 설명은 공백만으로 채울 수 없다.
+      properties:
+        description:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        unitPrice:
+          type: integer
+          format: int64
+          minimum: 0
+    ModifyReviewReq:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 255
+          minLength: 0
+        halfStars:
+          type: integer
+          format: int32
+          description: 0.5점 단위 별점을 정수로 나타낸 값(0~10). 화면 별점은 halfStars ÷ 2다.
+          maximum: 10
+          minimum: 0
+      required:
+      - halfStars
+    OrderDetailRes:
+      type: object
+      properties:
+        currentTotalPrice:
+          type: integer
+          format: int64
+        itemList:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemListRes"
+        orderId:
+          type: integer
+          format: int64
+        orderedAt:
+          type: string
+          format: date-time
+        totalPrice:
+          type: integer
+          format: int64
+    OrderItemDetailRes:
+      type: object
+      properties:
+        orderItemListRes:
+          $ref: "#/components/schemas/OrderItemListRes"
+    OrderItemListRes:
+      type: object
+      properties:
+        deliveredAt:
+          type: string
+          format: date-time
+        finalLinePrice:
+          type: integer
+          format: int64
+        linePrice:
+          type: integer
+          format: int64
+        orderItemId:
+          type: integer
+          format: int64
+        product:
+          $ref: "#/components/schemas/ProductSummary"
+        quantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - ORDERED
+          - SHIPPED
+          - DELIVERED
+          - PURCHASE_CONFIRMED
+          - CANCELED
+        usedCoupon:
+          $ref: "#/components/schemas/UsedCouponSummary"
+    OrderItemReq:
+      type: object
+      properties:
+        cartItemId:
+          type: integer
+          format: int64
+        couponIssuedId:
+          type: integer
+          format: int64
+          description: 쿠폰 발급 응답의 `couponIssuedId`. 쿠폰을 쓰지 않으면 비운다
+        orderQuantity:
+          type: integer
+          format: int32
+      required:
+      - cartItemId
+      - orderQuantity
+    OrderItemSearchRes: {}
+    OrderItemSummary:
+      type: object
+      properties:
+        buyer:
+          $ref: "#/components/schemas/UserSummary"
+        finalLinePrice:
+          type: integer
+          format: int64
+        linePrice:
+          type: integer
+          format: int64
+        orderItemId:
+          type: integer
+          format: int64
+        product:
+          $ref: "#/components/schemas/ProductSummary"
+        quantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - ORDERED
+          - SHIPPED
+          - DELIVERED
+          - PURCHASE_CONFIRMED
+          - CANCELED
+        usedCoupon:
+          $ref: "#/components/schemas/UsedCouponSummary"
+    OrderListRes:
+      type: object
+      properties:
+        itemCount:
+          type: integer
+          format: int32
+        orderId:
+          type: integer
+          format: int64
+        orderedAt:
+          type: string
+          format: date-time
+        totalPrice:
+          type: integer
+          format: int64
+    OrderReq:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemReq"
+          minItems: 1
+      required:
+      - items
+    ProductDetailRes:
+      type: object
+      properties:
+        avgRating:
+          type: number
+          format: double
+        category:
+          $ref: "#/components/schemas/CategorySummary"
+        description:
+          type: string
+        id:
+          type: integer
+          format: int64
+        imageUrls:
+          type: array
+          items:
+            type: string
+        inventoryQuantity:
+          type: integer
+          format: int32
+        name:
+          type: string
+        seller:
+          $ref: "#/components/schemas/UserSummary"
+        unitPrice:
+          type: integer
+          format: int64
+    ProductListRes:
+      type: object
+      properties:
+        avgRating:
+          type: number
+          format: double
+        categoryName:
+          type: string
+        id:
+          type: integer
+          format: int64
+        inventoryQuantity:
+          type: integer
+          format: int32
+        name:
+          type: string
+        seller:
+          $ref: "#/components/schemas/UserSummary"
+        thumbnailImageUrl:
+          type: string
+        unitPrice:
+          type: integer
+          format: int64
+    ProductReviewListRes:
+      type: object
+      properties:
+        content:
+          type: string
+        halfStars:
+          type: integer
+          format: int32
+          description: 0.5점 단위 별점을 정수로 나타낸 값(0~10). 화면 별점은 halfStars ÷ 2다.
+        isUpdated:
+          type: boolean
+        lastUpdatedAt:
+          type: string
+          format: date-time
+        reviewId:
+          type: integer
+          format: int64
+        writer:
+          $ref: "#/components/schemas/UserSummary"
+    ProductSearchRes:
+      type: object
+      properties:
+        hasNext:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductListRes"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalCount:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    ProductSummary:
+      type: object
+      properties:
+        name:
+          type: string
+        productId:
+          type: integer
+          format: int64
+        thumbnailImageUrl:
+          type: string
+    RegisterProductReq:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+          format: int64
+        description:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        imageIdList:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImageIdWithOrder"
+        initialInventory:
+          type: integer
+          format: int32
+          minimum: 0
+        name:
+          type: string
+          minLength: 1
+        unitPrice:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+      - categoryId
+      - description
+      - initialInventory
+      - name
+      - unitPrice
+    ReplaceProductImagesReq:
+      type: object
+      properties:
+        imageIdList:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImageIdWithOrder"
+    ReviewSearchRes:
+      type: object
+      properties:
+        hasNext:
+          type: boolean
+        page:
+          type: integer
+          format: int32
+        productReviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductReviewListRes"
+        size:
+          type: integer
+          format: int32
+        totalCount:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        userReviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserReviewListRes"
+    ReviewSection:
+      type: object
+      properties:
+        reviewList:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserReviewListRes"
+        totalCount:
+          type: integer
+          format: int64
+    SellerOrderItemSearchRes:
+      allOf:
+      - $ref: "#/components/schemas/OrderItemSearchRes"
+      - type: object
+        properties:
+          hasNext:
+            type: boolean
+          items:
+            type: array
+            items:
+              $ref: "#/components/schemas/OrderItemSummary"
+          page:
+            type: integer
+            format: int32
+          size:
+            type: integer
+            format: int32
+          totalCount:
+            type: integer
+            format: int64
+          totalPages:
+            type: integer
+            format: int32
+    UploadedImageListRes:
+      type: object
+      properties:
+        attached:
+          type: boolean
+        contentType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        id:
+          type: integer
+          format: int64
+        objectKey:
+          type: string
+        uploadUserId:
+          type: integer
+          format: int64
+    UsedCouponSummary:
+      type: object
+      properties:
+        couponIssuedId:
+          type: integer
+          format: int64
+        discountAmount:
+          type: integer
+          format: int64
+        discountValue:
+          type: integer
+          format: int64
+        maxDiscountAmount:
+          type: integer
+          format: int64
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+          - FIXED_AMOUNT
+          - PERCENT
+        usedAt:
+          type: string
+          format: date-time
+    UserInfoListRes:
+      type: object
+      properties:
+        deleted:
+          type: boolean
+        email:
+          type: string
+        id:
+          type: integer
+          format: int64
+        nickname:
+          type: string
+        role:
+          type: string
+          enum:
+          - BUYER
+          - SELLER
+          - ADMIN
+    UserProfileRes:
+      type: object
+      properties:
+        email:
+          type: string
+        joinDate:
+          type: string
+          format: date
+        nickname:
+          type: string
+        reviewSection:
+          $ref: "#/components/schemas/ReviewSection"
+        role:
+          type: string
+          enum:
+          - BUYER
+          - SELLER
+          - ADMIN
+        userId:
+          type: integer
+          format: int64
+    UserReviewListRes:
+      type: object
+      properties:
+        content:
+          type: string
+        halfStars:
+          type: integer
+          format: int32
+          description: 0.5점 단위 별점을 정수로 나타낸 값(0~10). 화면 별점은 halfStars ÷ 2다.
+        isUpdated:
+          type: boolean
+        lastUpdatedAt:
+          type: string
+          format: date-time
+        product:
+          $ref: "#/components/schemas/ProductSummary"
+        reviewId:
+          type: integer
+          format: int64
+    UserSummary:
+      type: object
+      properties:
+        nickname:
+          type: string
+        userId:
+          type: integer
+          format: int64
+    WithdrawReq:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+    WriteReviewReq:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 255
+          minLength: 0
+        halfStars:
+          type: integer
+          format: int32
+          description: 0.5점 단위 별점을 정수로 나타낸 값(0~10). 화면 별점은 halfStars ÷ 2다.
+          maximum: 10
+          minimum: 0
+      required:
+      - halfStars
+  securitySchemes:
+    csrf:
+      description: "`GET /auth/csrf` 응답의 `token`. POST, PATCH, DELETE 요청에 필요하다."
+      in: header
+      name: X-CSRF-TOKEN
+      type: apiKey

@@ -1,14 +1,16 @@
 package com.ecommerce.api.review.dto;
 
+import com.ecommerce.api.review.entity.Rating;
 import com.ecommerce.api.review.entity.Review;
 import com.ecommerce.api.user.entity.User;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 
 public record ProductReviewListRes(
         Long reviewId,
         UserSummary writer,
-        int halfStars,
+        @Schema(description = Rating.HALF_STARS_DESCRIPTION) int halfStars,
         String content,
         Instant lastUpdatedAt,
         boolean isUpdated
