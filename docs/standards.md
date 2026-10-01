@@ -13,7 +13,6 @@
 
   BOM 버전을 덮어쓰는 새 의존성은 이유를 커밋 메시지에 남긴다.
 - JSON 처리 객체는 Jackson 3의 `tools.jackson.databind.ObjectMapper`를 주입받는다. Spring Boot 4는 Jackson 3 객체만 자동으로 등록하므로, `com.fasterxml.jackson.databind.ObjectMapper`를 주입하면 빈을 찾지 못해 기동에 실패한다. 반면 DTO 어노테이션(`@JsonInclude` 등)은 `com.fasterxml.jackson.annotation` 패키지를 그대로 쓴다.
-- Querydsl Q클래스는 annotation processor가 빌드할 때 만든다. 생성된 파일을 커밋하지 않는다.
 
 ## 검증 게이트
 
@@ -67,7 +66,6 @@
 - 운영 설정은 `ddl-auto: validate`다.
   - 엔티티 매핑(테이블, 컬럼, 타입)을 바꾸면, 배포 전에 모든 대상 DB에 DDL을 직접 적용해야 한다. 적용하지 않으면 서버가 기동하지 않는다.
   - 같은 변경을 `api/db/schema.sql`(현재 스키마 전체 DDL)에도 반영한다. 엔티티 어노테이션에 없는 DB 객체(FULLTEXT 인덱스 등)도 이 파일이 원본이다.
-- 테스트는 `create-drop`으로 스키마를 엔티티에서 만든다. 그래서 운영 DB에만 있는 객체(FULLTEXT 인덱스)는 테스트 DB에 없다.
 
 ## 입출력 계약 패턴
 
@@ -89,7 +87,7 @@
 
 - 공통이고 비밀이 아닌 값만 `application.yaml`에 둔다. 환경마다 다른 값과 비밀값은 프로필 파일에서 `${ENV_NAME}` 자리표시자로 받는다.
   - 튜닝 값(환경마다 바꿀 수 있지만 쓸 만한 기본값이 있는 값)은 `application.yaml`에 기본값이 있는 자리표시자(`${ENV_NAME:기본값}`)로 둘 수 있다.
-  - 예외: CORS 허용 출처(`http://localhost:3000`)는 코드(`WebConfig`)에 있다.
+  - 예외: CORS 허용 출처는 코드(`WebConfig`)에 둔다(정책은 `security.md`).
 - `application-secret.yaml`, `compose.yaml`, `.env`, GCP 키 파일(`api/infra/gcp/`)은 커밋하지 않는다. 이미 `.gitignore`에 있고, 이 항목을 지우지 않는다. `api/infra/` 아래에서는 예시 구성 `scaleout-local/`만 커밋한다(비밀값은 `${…}` 자리표시자, `.env`는 제외).
 - 프로필: `local`(로컬, `application-secret.yaml` import), `dev`(클라우드 실행), `loadtest`(부하테스트, 인증 우회 가능). **프로필 없이는 기동하지 않는다.** DB 주소 등 필수 자리표시자가 비어 있기 때문이다.
 - 설정 묶음은 `@ConfigurationProperties` record로 받는다. 범위 검사가 필요하면 `@Validated`를 붙인다.
