@@ -70,7 +70,7 @@
 ## 반복 작업 체크리스트
 
 ### 엔티티나 테이블을 바꿀 때
-1. 엔티티를 수정하고, 같은 변경의 DDL(ALTER/CREATE)을 작성한다. `api/db/schema.sql`에도 같은 변경을 반영한다.
+1. 엔티티를 수정하고, 같은 변경의 DDL(ALTER/CREATE)을 작성한다. `api/db/schema.sql`과 README의 ERD에도 같은 변경을 반영한다.
 2. `./gradlew test`를 실행한다. 테스트는 `create-drop`이라 DDL 누락을 잡지 못한다.
 3. 로컬 MySQL에 DDL을 적용하고 `local` 프로필로 기동한다. `validate`가 통과하면 매핑과 DDL이 일치한다는 뜻이다.
 4. 새 테이블이면 `OrderServiceIntegrationTestSupport.CLEANUP_TABLES`에 추가한다. 정리할 때 FK 검사를 끄므로 순서는 상관없다. 빠뜨리면 테스트끼리 데이터가 섞인다.

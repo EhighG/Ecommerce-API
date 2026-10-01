@@ -29,7 +29,7 @@ API 인스턴스 ──HTTP :8090──▶ Prometheus(수집) ──▶ Grafana
 
 ## 데이터 모델
 
-테이블 관계와 핵심 제약(유니크, FULLTEXT)은 [README의 ERD](../README.md#erd)에, 컬럼 전체는 `api/db/schema.sql`에 있다.
+테이블, 컬럼, 관계, 유니크 키는 [README의 ERD](../README.md#erd)에 있다. 스키마 원본(인덱스 포함 DDL)은 `api/db/schema.sql`이다.
 
 ## 애플리케이션 내부 모듈
 
