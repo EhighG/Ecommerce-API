@@ -76,6 +76,7 @@ public record OrderItemListRes(
             Long productId,
             String name,
             String thumbnailUrl,
+            long unitPrice,
             UserSummary seller
     ) {
         public ProductSummary(ProductSnapshot product, String thumbnailUrl) {
@@ -83,6 +84,7 @@ public record OrderItemListRes(
                     product.getId(),
                     product.getName(),
                     thumbnailUrl,
+                    product.getUnitPrice(),
                     new UserSummary(product.getSeller().getId(), product.getSeller().getNickname())
             );
         }

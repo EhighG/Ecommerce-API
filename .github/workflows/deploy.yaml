@@ -15,8 +15,6 @@ jobs:
 
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-      REGION: ${{ vars.GCP_REGION }}
-      INSTANCE_NAME: ${{vars.GCE_INSTANCE_NAME }}
       ZONE: ${{ vars.GCE_ZONE }}
       REPOSITORY: ${{ vars.ARTIFACT_REPOSITORY }}
       IMAGE_NAME: ${{ vars.API_SERVER_IMAGE_NAME }}

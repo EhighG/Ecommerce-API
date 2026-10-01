@@ -29,8 +29,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("""
             select o
             from Order o
-            join fetch o.itemList
+            join fetch o.itemList oi
             where o.id = :id
+            order by oi.id asc
             """)
     Optional<Order> findDetailById(Long id);
 

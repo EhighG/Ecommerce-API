@@ -44,11 +44,7 @@ export function parseOrderCouponCandidateCsv(text) {
     copyOptionalString(candidate, row, headerIndex, "password");
     copyOptionalPositiveInteger(candidate, row, headerIndex, "userId", line);
     copyOptionalPositiveInteger(candidate, row, headerIndex, "couponEventId", line);
-    copyOptionalPositiveInteger(candidate, row, headerIndex, "couponIssueId", line);
-
-    if ("cancelAfterOrder" in headerIndex) {
-      candidate.cancelAfterOrder = parseBoolean(optionalString(row, headerIndex, "cancelAfterOrder"));
-    }
+    copyOptionalPositiveInteger(candidate, row, headerIndex, "couponIssuedId", line);
 
     return candidate;
   });
@@ -122,13 +118,6 @@ function positiveInteger(raw, line, name) {
   }
 
   return parsed;
-}
-
-function parseBoolean(raw) {
-  if (!raw) {
-    return false;
-  }
-  return ["1", "true", "yes", "y"].includes(raw.toLowerCase());
 }
 
 function parseDelimited(input, delimiter) {

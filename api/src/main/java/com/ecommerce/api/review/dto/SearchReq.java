@@ -2,6 +2,7 @@ package com.ecommerce.api.review.dto;
 
 import com.ecommerce.api.common.exception.AppException;
 import com.ecommerce.api.common.exception.ErrorCode;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -10,7 +11,7 @@ public record SearchReq(
         Long productId,
         Long writerId,
         @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
-        @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") Integer size
+        Integer size
 ) {
     public SearchReq {
         if ((searchBy == SearchBy.PRODUCT && productId == null) ||
@@ -20,6 +21,11 @@ public record SearchReq(
 
         if (page == null) page = 0;
         if (size == null) size = 20;
+    }
+
+    @AssertTrue(message = "페이지 크기는 20, 50, 100 중 하나여야 합니다.")
+    public boolean isSizeAllowed() {
+        return size == 20 || size == 50 || size == 100;
     }
 
     public enum SearchBy {

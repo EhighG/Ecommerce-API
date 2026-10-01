@@ -1,0 +1,109 @@
+x-app-environment: &app-environment
+  SPRING_PROFILES_ACTIVE: local
+  RDB_HOST: mysql
+  RDB_PORT: 3306
+  RDB_NAME: ecommerce
+  RDB_USERNAME: ${MYSQL_USER}
+  RDB_PASSWORD: ${MYSQL_PASSWORD}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+  GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+  GCS_BUCKET: ${GCS_BUCKET}
+  GCS_UPLOAD_PREFIX: ${GCS_UPLOAD_PREFIX}
+  # GCS access on local
+  GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_ADC_CONTAINER_PATH}
+  LOADTEST_AUTH_ENABLED: ${LOADTEST_AUTH_ENABLED}
+  LOADTEST_AUTH_SECRET: ${LOADTEST_AUTH_SECRET}
+  HIKARI_MAX_POOL_SIZE: 10
+  HIKARI_MIN_IDLE: 10
+  HIKARI_CONN_TIMEOUT_MS: 30000
+  PRODUCT_VIEW_COUNT_FLUSH_BATCH_SIZE: 200
+  PRODUCT_VIEW_COUNT_FLUSH_MAX_BATCHES_PER_RUN: 5
+
+x-app-common: &app-common
+  build:
+    context: ../..
+  volumes:
+    - type: bind
+      source: ${GOOGLE_ADC_HOST_PATH}
+      target: ${GOOGLE_ADC_CONTAINER_PATH}
+      read_only: true
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ecommerce
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-scaleout-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --ngram_token_size=2
+      - --innodb_ft_enable_stopword=OFF
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping --protocol=tcp -h 127.0.0.1 -P 3306 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-scaleout-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api-1:
+    <<: *app-common
+    environment:
+      <<: *app-environment
+      APP_INSTANCE_ID: api-1
+
+  api-2:
+    <<: *app-common
+    environment:
+      <<: *app-environment
+      APP_INSTANCE_ID: api-2
+
+  nginx:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro
+    depends_on:
+      - api-1
+      - api-2
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/scaleout-local.yaml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api-1
+      - api-2
+
+volumes:
+  mysql-scaleout-data:
+  redis-scaleout-data:

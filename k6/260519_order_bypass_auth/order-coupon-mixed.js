@@ -6,6 +6,7 @@ import { scenario } from "k6/execution";
 import { parseOrderCouponCandidateCsv } from "../lib/coupon-candidates.js";
 import { logUnexpectedResponse, readApiError } from "../lib/auth.js";
 import { env } from "../lib/env.js";
+import { newIdempotencyKey } from "../lib/idempotency.js";
 
 const BASE_URL = env("BASE_URL");
 const LOADTEST_AUTH_SECRET = env("LOADTEST_AUTH_SECRET");
@@ -77,14 +78,15 @@ const orderCouponGetOrderDetailAfterCancelDuration = new Trend(
   true,
 );
 
+// 서버 오류 code는 4자리 문자열이다.
 const EXPECTED_FAILURE_CODES = new Set([
-  2501, // INSUFFICIENT_INVENTORY
-  3003, // WRONG_STATUS_CHANGE
-  7000, // CART_ITEM_NOT_FOUND
-  7501, // COUPON_EXPIRED
-  7502, // INVALID_COUPON_STATUS
-  7509, // DUPLICATED_COUPON
-  7510, // COUPON_ISSUED_NOT_FOUND
+  "2501", // INSUFFICIENT_INVENTORY
+  "3003", // WRONG_STATUS_CHANGE
+  "7000", // CART_ITEM_NOT_FOUND
+  "7501", // COUPON_EXPIRED
+  "7502", // INVALID_COUPON_STATUS
+  "7509", // DUPLICATED_COUPON
+  "7510", // COUPON_ISSUED_NOT_FOUND
 ]);
 
 const ERROR_TYPES = [
@@ -514,18 +516,15 @@ function buildOrderReq(candidate) {
     orderQuantity: candidate.orderQuantity,
   };
 
-  if (candidate.couponIssueId) {
-    item.couponIssuedId = candidate.couponIssueId;
+  if (candidate.couponIssuedId) {
+    item.couponIssuedId = candidate.couponIssuedId;
   }
 
   return { items: [item] };
 }
 
-function shouldCancel(candidate) {
-  if (typeof candidate.cancelAfterOrder === "boolean") {
-    return candidate.cancelAfterOrder;
-  }
-
+// 취소 비율은 CANCEL_RATIO 환경변수만 정한다(후보 CSV는 취소 여부를 정하지 않는다).
+function shouldCancel() {
   if (CANCEL_RATIO <= 0) {
     return false;
   }
@@ -575,11 +574,11 @@ function findTargetOrderItem(orderDetail, candidate) {
     return null;
   }
 
-  if (candidate.couponIssueId) {
+  if (candidate.couponIssuedId) {
     const couponItem = items.find(
       (item) =>
         Number(item && item.usedCoupon && item.usedCoupon.couponIssuedId) ===
-        candidate.couponIssueId,
+        candidate.couponIssuedId,
     );
     if (couponItem) {
       return couponItem;
@@ -609,7 +608,7 @@ function logCandidateFailure(label, candidate, extra = {}) {
     productId: candidate.productId,
     orderQuantity: candidate.orderQuantity,
     couponEventId: candidate.couponEventId,
-    couponIssueId: candidate.couponIssueId,
+    couponIssuedId: candidate.couponIssuedId,
   };
   Object.keys(extra).forEach((key) => {
     payload[key] = extra[key];
@@ -640,7 +639,7 @@ function recordExpectedFailure(type, label, candidate, res, requestBody) {
       cartItemId: candidate.cartItemId,
       productId: candidate.productId,
       couponEventId: candidate.couponEventId,
-      couponIssueId: candidate.couponIssueId,
+      couponIssuedId: candidate.couponIssuedId,
       status: res.status,
       errorCode: apiError && apiError.code,
       errorMessage: apiError && apiError.message,
@@ -661,7 +660,7 @@ function recordUnexpectedFailure(type, label, candidate, res, requestBody) {
       email: candidate.email,
       userId: candidate.userId,
       cartItemId: candidate.cartItemId,
-      couponIssueId: candidate.couponIssueId,
+      couponIssuedId: candidate.couponIssuedId,
       iteration: scenario.iterationInTest,
     });
   }
@@ -689,6 +688,7 @@ function runOrderCouponMixedFlow() {
   const orderRes = http.post(`${BASE_URL}/orders`, JSON.stringify(orderReq), {
     headers: loadtestAuthHeaders(candidate, {
       "Content-Type": "application/json",
+      "Idempotency-Key": newIdempotencyKey("order"),
     }),
     tags: currentRequestTags("POST /orders"),
   });
@@ -741,13 +741,13 @@ function runOrderCouponMixedFlow() {
     "order detail status is 200": (r) => r.status === 200,
     "order detail has target item": () => !!targetOrderItem,
     "coupon order has used coupon": () =>
-      !candidate.couponIssueId ||
+      !candidate.couponIssuedId ||
       Number(
         targetOrderItem &&
           targetOrderItem.usedCoupon &&
           targetOrderItem.usedCoupon.couponIssuedId,
       ) ===
-        candidate.couponIssueId,
+        candidate.couponIssuedId,
   });
   if (!detailOk) {
     recordUnexpectedFailure(
@@ -762,7 +762,7 @@ function runOrderCouponMixedFlow() {
 
   addMeasureCounter(orderCouponOrderSuccess);
 
-  if (!shouldCancel(candidate)) {
+  if (!shouldCancel()) {
     return;
   }
 
