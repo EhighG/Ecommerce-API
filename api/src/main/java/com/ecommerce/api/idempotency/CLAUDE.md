@@ -9,7 +9,7 @@
 ## 항상 지켜야 할 것
 - `inspectOrClaim`의 판정 순서:
   1. 기록이 없으면 `PROCESSING`으로 저장(`saveAndFlush`)하고 `Claimed`를 돌려준다.
-  2. 만료된 기록이면 만료 조건을 건 삭제(`id`와 `expires_at <= 지금`)로 지운 뒤 새로 선점한다. 0행이면 같은 트랜잭션에서 다시 읽지 않고, 호출하는 쪽이 새 트랜잭션에서 다시 판정한다. 현재는 id만 보고 무조건 지운다(`docs/tracking/findings/order.md`, 우선순위 가장 높음).
+  2. 만료된 기록이면 만료 조건을 건 삭제(`id`와 `expires_at <= 지금`)로 지운 뒤 새로 선점한다. 0행이면 같은 트랜잭션에서 다시 읽지 않고, 호출하는 쪽이 새 트랜잭션에서 다시 판정한다.
   3. 지문이 다르면 `IDEMPOTENCY_KEY_CONFLICT`(409)다.
   4. 처리 중이면 `IDEMPOTENCY_REQUEST_PROCESSING`(409)이다.
   5. 성공한 기록이면 `Replay(resourceType, resourceId)`다.
