@@ -16,7 +16,7 @@
   2. Lua `issueScript`를 실행한다. 이미 발급자 집합에 있으면 −1, 재고가 0 이하이면 −2, 통과하면 `DECR` + `SADD`.
   3. DB에 `saveAndFlush`한다.
   4. DB 저장에서 **어떤 예외가 나든** `compensateScript`로 Redis를 되돌린다. 되돌리지 못하는 경우는 `docs/tracking/findings/coupon.md`에 있다.
-  5. 유니크 제약(`uk_coupon_issued_event_user`) 위반일 때만 `COUPON_ALREADY_ISSUED`로 바꾼다. 현재는 `DataIntegrityViolationException` 전체를 이 코드로 바꾼다(`docs/tracking/findings/coupon.md`).
+  5. 유니크 제약(`uk_coupon_issued_event_user`) 위반일 때만 `COUPON_ALREADY_ISSUED`로 바꾼다.
 
   보상 없이 예외를 삼키거나, 예외 경로를 새로 추가하면서 보상을 빠뜨리면 수량이 샌다.
 - 캐시 초기화(`initEventScript`)는 meta 키가 **없을 때만** 한다. 수량은 `초기 수량 − DB 발급 건수`로 넣고, 발급자 집합은 비운다. 그래서 재적재 뒤 이미 받은 사람이 다시 요청하면 Redis 단계는 통과하고 DB 유니크 제약에 걸려 보상 후 `7506`이 된다(남은 수량이 0이면 Redis 단계에서 `7507`). 1인 1장은 이 DB 유니크 `(coupon_event_id, user_id)`가 최종으로 막으므로, 이 제약을 지우면 재적재 후 중복 발급이 가능해진다.
