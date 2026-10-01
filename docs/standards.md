@@ -16,7 +16,7 @@
 
 ## 검증 게이트
 
-- 병합 전에 `cd api && ./gradlew test`를 로컬에서 실행해 통과시킨다. push나 PR에서 테스트를 돌리는 자동 검사는 없다. 수동 배포 워크플로만 이미지를 빌드하기 전에 `./gradlew cleanTest test`를 실행하고, 실패하면 배포하지 않는다.
+- 병합 전에 `cd api && ./gradlew test`를 로컬에서 실행해 통과시킨다. `develop`으로 가는 PR은 테스트 워크플로(`.github/workflows/test.yaml`)가 같은 테스트를 돌리고, 실패하면 병합하지 않는다. 수동 배포 워크플로도 이미지를 빌드하기 전에 `./gradlew cleanTest test`를 실행하고, 실패하면 배포하지 않는다.
 - 통합 테스트는 Testcontainers(MySQL 8.4)를 쓰므로 Docker가 떠 있어야 한다. Docker가 없어서 테스트를 건너뛰었다면 "통과"가 아니다.
 - `@Tag("reproduction")`이 붙은 테스트는 기본 실행에서 빠진다. 버그를 재현하는 테스트나 오래 걸리는 테스트에만 붙인다.
 - 주문 생성, 주문항목 취소, 멱등 처리, 재고 차감을 바꾸면 `OrderServiceIntegrationTestSupport` 기반의 실제 MySQL 통합 테스트로 검증한다. Mock만으로는 락 순서, 유니크 제약, 트랜잭션 분리를 검증할 수 없다.

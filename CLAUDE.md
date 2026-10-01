@@ -44,7 +44,9 @@ Ecommerce-project/
 │       └── common/CLAUDE.md       → 오류 코드, 전역 예외 처리, 공통 설정
 ├── k6/CLAUDE.md                   → 부하테스트 스크립트
 ├── infra/                         → 부하테스트 자동화 스크립트, 후보 데이터 SQL
-└── .github/workflows/deploy.yaml  → 수동 배포 워크플로(테스트 → 이미지 → 인스턴스 교체)
+└── .github/workflows/
+    ├── test.yaml                  → develop으로 가는 PR마다 테스트 실행
+    └── deploy.yaml                → 수동 배포 워크플로(테스트 → 이미지 → 인스턴스 교체)
 ```
 
 ## 절대 규칙
