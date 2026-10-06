@@ -43,4 +43,12 @@ public interface IdempotencyRecordRepository extends JpaRepository<IdempotencyRe
                 and ir.status = :processing
             """)
     int deleteProcessing(Long recordId, IdempotencyStatus processing);
+
+    @Modifying
+    @Query("""
+            delete from IdempotencyRecord ir
+            where ir.id = :recordId
+                and ir.expiresAt <= :now
+            """)
+    int deleteExpired(Long recordId, Instant now);
 }

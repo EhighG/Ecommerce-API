@@ -41,12 +41,20 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.mysql.MySQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
@@ -133,7 +141,7 @@ public abstract class OrderServiceIntegrationTestSupport {
     protected IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    protected JdbcTemplate jdbcTemplate;
 
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -255,6 +263,62 @@ public abstract class OrderServiceIntegrationTestSupport {
 
     protected void tx(Runnable runnable) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> runnable.run());
+    }
+
+    /**
+     * 지정한 테이블에서 락을 기다리는 트랜잭션이 정확히 expectedWaiters개가 될 때까지 기다린다.
+     * MySQL이 보고하는 락 대기 상태({@code performance_schema.data_lock_waits})로 단계 순서를 맞추기 위한 것이다.
+     * 제한 시간 안에 그 상태가 되지 않거나 더 많이 기다리면 테스트를 실패시킨다.
+     */
+    protected void awaitLockWaiters(String tableName, int expectedWaiters, Duration timeout) {
+        long deadline = System.nanoTime() + timeout.toNanos();
+        int waiters;
+
+        try (Connection root = openRootConnection();
+             PreparedStatement statement = root.prepareStatement("""
+                     select count(distinct w.REQUESTING_ENGINE_TRANSACTION_ID)
+                     from performance_schema.data_lock_waits w
+                     join performance_schema.data_locks l
+                       on l.ENGINE = w.ENGINE
+                      and l.ENGINE_LOCK_ID = w.REQUESTING_ENGINE_LOCK_ID
+                     where l.OBJECT_SCHEMA = ?
+                       and l.OBJECT_NAME = ?
+                     """)) {
+            statement.setString(1, MYSQL.getDatabaseName());
+            statement.setString(2, tableName);
+
+            while (true) {
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    resultSet.next();
+                    waiters = resultSet.getInt(1);
+                }
+
+                if (waiters > expectedWaiters) {
+                    fail("%s 테이블의 락 대기가 예상(%d)보다 많습니다. 실제 = %d", tableName, expectedWaiters, waiters);
+                }
+                if (waiters == expectedWaiters) {
+                    return;
+                }
+                if (System.nanoTime() >= deadline) {
+                    fail("%s 테이블에서 락 대기 %d개가 %s 안에 생기지 않았습니다. 마지막으로 본 대기 수 = %d",
+                            tableName, expectedWaiters, timeout, waiters);
+                }
+
+                LockSupport.parkNanos(Duration.ofMillis(10).toNanos());
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("락 대기 상태를 조회하지 못했습니다.", e);
+        }
+    }
+
+    /**
+     * 테스트가 직접 락을 잡거나 다른 트랜잭션 역할을 할 때 쓰는 root 연결이다. 자동 커밋은 꺼져 있다.
+     * 호출한 쪽이 반드시 닫아야 한다. 커밋하지 않고 닫으면 변경이 롤백된다.
+     */
+    protected Connection openRootConnection() throws SQLException {
+        Connection connection = DriverManager.getConnection(MYSQL.getJdbcUrl(), "root", MYSQL.getPassword());
+        connection.setAutoCommit(false);
+        return connection;
     }
 
     private void cleanDatabase() {

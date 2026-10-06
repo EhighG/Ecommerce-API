@@ -894,20 +894,20 @@ paths:
             application/json:
               examples:
                 "9102":
-                  summary: 9102 같은 키로 다른 내용을 보냄
+                  summary: 9102 같은 키로 다른 내용을 보냄. 같은 키로 다시 보내지 않는다
                   value:
                     code: "9102"
                     message: 같은 Idempotency-Key로 다른 요청을 보낼 수 없습니다.
                 "9103":
-                  summary: 9103 같은 키의 요청이 처리 중. 잠시 후 같은 키로 다시 보낸다
+                  summary: 9103 같은 키의 요청이 처리 중이거나 막 처리됨. 잠시 후 같은 키로 다시 보낸다
                   value:
                     code: "9103"
                     message: 동일한 요청이 이미 처리 중입니다.
               schema:
                 $ref: "#/components/schemas/ApiError"
           description: |-
-            - `9102`: 같은 키로 다른 내용을 보냄
-            - `9103`: 같은 키의 요청이 처리 중. 잠시 후 같은 키로 다시 보낸다
+            - `9102`: 같은 키로 다른 내용을 보냄. 같은 키로 다시 보내지 않는다
+            - `9103`: 같은 키의 요청이 처리 중이거나 막 처리됨. 잠시 후 같은 키로 다시 보낸다
       security:
       - csrf: []
       summary: 주문 생성
