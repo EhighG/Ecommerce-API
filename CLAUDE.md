@@ -22,6 +22,7 @@ Ecommerce-project/
 │   ├── api/                       → API 명세(코드에서 생성한 openapi.yaml)와 GitHub Pages용 Swagger UI 페이지
 │   ├── adr/                       → 결정 기록(index.md + 0001~0006)
 │   ├── cases/                     → 성과 사례 상세(부하테스트 측정값의 원본)
+│   ├── research/                  → 1차 출처 조사(결정과 계약의 근거 자료)
 │   ├── assets/                    → 기존 다이어그램 이미지
 │   ├── agents/                    → 스킬 설정(이슈 트래커, 트리아지 라벨, 도메인 문서 위치)
 │   └── tracking/
