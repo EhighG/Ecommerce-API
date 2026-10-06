@@ -48,7 +48,7 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
     @Autowired
     private OrderRequestFingerprintGenerator orderRequestFingerprintGenerator;
 
-    // 장바구니 수량 2, 주문 수량 1로 주문한다. 첫 번째 테스트(경쟁)에서는 이것이 필요하다.
+    // 장바구니 수량 2, 주문 수량 1로 주문한다. 성공 표시 경쟁 테스트(givenSucceededMarkNotYetCommitted…)에서는 이것이 필요하다.
     // 전량 주문이면 장바구니 항목이 지워져서, 고치기 전 코드에서 두 번째 주문이 7000으로 막히고 중복 주문이라는 버그가 드러나지 않는다.
     private static final int CART_QUANTITY = 2;
     private static final int ORDER_QUANTITY = 1;
@@ -68,6 +68,7 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
         CountDownLatch markedSucceeded = new CountDownLatch(1);
         CountDownLatch commitSignal = new CountDownLatch(1);
 
+        Throwable primary = null;
         try {
             // when: A는 성공 표시(UPDATE)를 실행해 행 락을 잡은 채 커밋 신호를 기다린다
             Future<?> a = executor.submit(() -> tx(() -> {
@@ -104,9 +105,12 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
             assertThat(idempotentOrderPlacementService.placeOrder(req, fixture.buyerId(), key))
                     .isEqualTo(firstOrderId);
             assertThat(orderRepository.count()).isEqualTo(1);
+        } catch (Throwable t) {
+            primary = t;
+            throw t;
         } finally {
             commitSignal.countDown();
-            stop(executor);
+            stop(executor, primary);
         }
     }
 
@@ -124,6 +128,7 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
         try (Connection inventoryLock = openRootConnection()) {
             lockInventory(inventoryLock, fixture.productId());
 
+            Throwable primary = null;
             try {
                 // when: A는 선점을 커밋한 뒤 재고에서 기다린다
                 Future<Long> a = executor.submit(
@@ -156,9 +161,12 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
                 assertThat(inventoryQuantity(fixture.productId())).isEqualTo(10 - ORDER_QUANTITY);
                 assertThat(productOrderItemCount(fixture.productId())).isEqualTo(1);
                 assertThat(cartQuantity(fixture.cartItemId())).isEqualTo(CART_QUANTITY - ORDER_QUANTITY);
+            } catch (Throwable t) {
+                primary = t;
+                throw t;
             } finally {
                 inventoryLock.rollback();
-                stop(executor);
+                stop(executor, primary);
             }
         }
     }
@@ -235,6 +243,7 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
 
         // 다른 트랜잭션이 만료된 기록을 지우고 커밋하지 않은 채 행 락을 쥔다
         try (Connection otherTx = openRootConnection()) {
+            Throwable primary = null;
             try {
                 deleteRecord(otherTx, recordId);
 
@@ -251,9 +260,12 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
                 assertThat(orderRepository.count()).isZero();
                 assertThat(inventoryQuantity(fixture.productId())).isEqualTo(10);
                 assertThat(cartQuantity(fixture.cartItemId())).isEqualTo(CART_QUANTITY);
+            } catch (Throwable t) {
+                primary = t;
+                throw t;
             } finally {
                 otherTx.rollback();
-                stop(executor);
+                stop(executor, primary);
             }
         }
     }
@@ -295,11 +307,28 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
     }
 
     // 실패한 테스트가 다음 테스트의 정리 단계까지 스레드를 남기지 않게 한다.
-    private void stop(ExecutorService executor) throws InterruptedException {
+    // 이미 실패한 테스트(primary)라면 종료 지연은 억제된 예외로 붙여, 처음 실패 원인을 가리지 않는다.
+    private void stop(ExecutorService executor, Throwable primary) {
         executor.shutdownNow();
-        if (!executor.awaitTermination(WAIT_LIMIT.toSeconds(), TimeUnit.SECONDS)) {
-            fail("테스트 스레드가 제한 시간 안에 종료되지 않았습니다.");
+
+        String problem = null;
+        try {
+            if (!executor.awaitTermination(WAIT_LIMIT.toSeconds(), TimeUnit.SECONDS)) {
+                problem = "테스트 스레드가 제한 시간 안에 종료되지 않았습니다.";
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            problem = "테스트 스레드의 종료를 기다리다 중단됐습니다.";
         }
+
+        if (problem == null) {
+            return;
+        }
+        if (primary != null) {
+            primary.addSuppressed(new IllegalStateException(problem));
+            return;
+        }
+        fail(problem);
     }
 
     private void awaitOrFail(CountDownLatch latch, String name) {
