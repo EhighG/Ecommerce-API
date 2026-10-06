@@ -42,7 +42,7 @@ Ecommerce-project/
 │       ├── order/CLAUDE.md        → 주문 생성(멱등), 주문항목 상태 전이·취소
 │       ├── coupon/CLAUDE.md       → 쿠폰 이벤트, Redis 선착순 발급, 사용·복구
 │       ├── review/CLAUDE.md       → 리뷰, 평점 통계
-│       ├── idempotency/CLAUDE.md  → 멱등 키 기록
+│       ├── idempotency/CLAUDE.md  → 멱등성 record
 │       └── common/CLAUDE.md       → 오류 코드, 전역 예외 처리, 공통 설정
 ├── k6/CLAUDE.md                   → 부하테스트 스크립트
 ├── infra/                         → 부하테스트 자동화 스크립트, 후보 데이터 SQL

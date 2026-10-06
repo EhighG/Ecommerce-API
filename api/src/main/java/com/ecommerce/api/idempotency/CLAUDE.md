@@ -1,4 +1,4 @@
-# idempotency — 멱등 키 기록
+# idempotency — 멱등성 record
 
 멱등 처리의 결정과 이유는 `docs/adr/0001-order-idempotency.md`에, 트랜잭션 구성은 `docs/architecture.md`의 "대표 흐름"에, 키 판정 결과는 `docs/business-rules.md`의 "중복 주문 방지"에 있다.
 
@@ -16,8 +16,9 @@
 
   지문 비교를 상태 판정보다 먼저 한다. 순서를 바꾸면 다른 내용의 요청이 기존 결과로 재응답된다.
 - `markSucceeded`와 `deleteProcessing`은 `status = PROCESSING` 조건부로만 동작한다. `markSucceeded`가 1행을 바꾸지 못하면(다른 요청이 만료된 선점을 이어받아 record를 지운 경우) `IDEMPOTENCY_REQUEST_PROCESSING`(409)을 던져 본 처리까지 롤백시킨다. 성공 표시는 만료 시각을 그 시점부터 24시간 뒤로 다시 잡는다.
-- 만료 삭제의 조건(`expires_at <= 지금`)은 "성공 표시가 만료 시각을 미래로 민다"는 성질에 기댄다. 그래서 만료 삭제의 `now`는 만료 판정에 쓴 값과 같아야 하고, 성공 표시가 만료 시각을 미래로 밀지 않게 바꾸면 안 된다. 상태 조건(`PROCESSING`)은 쓰지 않는다. 24시간이 지난 성공 기록을 못 지워서 그 키가 영영 막힌다.
-- 기록을 찾는 조회에 `SELECT … FOR UPDATE`를 쓰지 않는다. 없는 새 키에 범위 락(gap lock)이 잡혀, 같은 키의 첫 요청 두 개가 insert할 때 데드락이 난다.
+- 만료 삭제의 `now`는 만료 판정에 쓴 값과 같아야 한다. 그래야 삭제가 판정한 조건을 정확히 다시 확인한다.
+- 방금 `SUCCEEDED`가 된 record를 지우지 않는 것은 성공 표시가 만료 시각을 미래로 밀기 때문이다. 이 성질을 바꾸면 만료 삭제가 성공한 기록을 지운다. 상태 조건(`PROCESSING`)은 쓰지 않는다. 24시간이 지난 성공 기록을 못 지워서 그 키가 영영 막힌다.
+- 기록을 찾는 조회에 `SELECT … FOR UPDATE`를 쓰지 않는다. 없는 새 키에 범위 락(gap lock)이 잡혀, 같은 키의 첫 요청 두 개가 insert할 때 데드락이 날 수 있다.
 - 새 기능에 적용할 때는 `IdempotencyScope`와 `IdempotencyResourceType`에 값을 추가한다. 다른 scope끼리는 같은 키를 써도 충돌하지 않는다.
 
 ## 테스트 기준
