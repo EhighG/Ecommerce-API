@@ -48,8 +48,8 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
     @Autowired
     private OrderRequestFingerprintGenerator orderRequestFingerprintGenerator;
 
-    // 장바구니 수량 2, 주문 수량 1로 주문한다. 전량 주문이면 장바구니 항목이 지워져서,
-    // 고치기 전 코드에서 두 번째 주문이 7000으로 막히고 중복 주문이라는 버그가 드러나지 않는다.
+    // 장바구니 수량 2, 주문 수량 1로 주문한다. 첫 번째 테스트(경쟁)에서는 이것이 필요하다.
+    // 전량 주문이면 장바구니 항목이 지워져서, 고치기 전 코드에서 두 번째 주문이 7000으로 막히고 중복 주문이라는 버그가 드러나지 않는다.
     private static final int CART_QUANTITY = 2;
     private static final int ORDER_QUANTITY = 1;
 
@@ -106,7 +106,7 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
             assertThat(orderRepository.count()).isEqualTo(1);
         } finally {
             commitSignal.countDown();
-            executor.shutdownNow();
+            stop(executor);
         }
     }
 
@@ -158,7 +158,7 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
                 assertThat(cartQuantity(fixture.cartItemId())).isEqualTo(CART_QUANTITY - ORDER_QUANTITY);
             } finally {
                 inventoryLock.rollback();
-                executor.shutdownNow();
+                stop(executor);
             }
         }
     }
@@ -253,7 +253,7 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
                 assertThat(cartQuantity(fixture.cartItemId())).isEqualTo(CART_QUANTITY);
             } finally {
                 otherTx.rollback();
-                executor.shutdownNow();
+                stop(executor);
             }
         }
     }
@@ -291,6 +291,14 @@ class IdempotentOrderPlacementExpiredRecordTest extends OrderServiceIntegrationT
                 "delete from idempotency_record where id = ?")) {
             statement.setLong(1, recordId);
             assertThat(statement.executeUpdate()).isEqualTo(1);
+        }
+    }
+
+    // 실패한 테스트가 다음 테스트의 정리 단계까지 스레드를 남기지 않게 한다.
+    private void stop(ExecutorService executor) throws InterruptedException {
+        executor.shutdownNow();
+        if (!executor.awaitTermination(WAIT_LIMIT.toSeconds(), TimeUnit.SECONDS)) {
+            fail("테스트 스레드가 제한 시간 안에 종료되지 않았습니다.");
         }
     }
 
