@@ -133,12 +133,8 @@ public class CouponService {
     }
 
     @Transactional
-    public void restoreCouponIssued(Long couponIssuedId, Long buyerId, Instant now) {
-        // 주문 생성과 같은 락 순서를 위해 복구 전에 잠근다. 락 없이 읽으면 쿠폰 행 락이 커밋 때로 밀린다
-        CouponIssued couponIssued = couponIssuedRepository
-                .findAllByIdInAndUserIdForUpdate(List.of(couponIssuedId), buyerId)
-                .stream()
-                .findFirst()
+    public void restoreCouponIssued(Long couponIssuedId, Instant now) {
+        CouponIssued couponIssued = couponIssuedRepository.findById(couponIssuedId)
                 .orElseThrow(() -> new AppException(COUPON_ISSUED_NOT_FOUND));
 
         couponIssued.restore(now);

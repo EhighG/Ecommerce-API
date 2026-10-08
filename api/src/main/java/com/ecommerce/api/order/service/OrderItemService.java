@@ -187,7 +187,8 @@ public class OrderItemService {
         // 사용했던 쿠폰 있으면 복구
         OrderItemCoupon usedCoupon = orderItemCouponService.findByOrderItemId(orderItemId);
         if (usedCoupon != null) {
-            restoreUsedCoupon(orderItem, usedCoupon.getUsedCoupon().getCouponIssuedId());
+            Long couponIssuedId = usedCoupon.getUsedCoupon().getCouponIssuedId();
+            couponService.restoreCouponIssued(couponIssuedId, Instant.now());
         }
 
         // 데드락 방지를 위해 주문생성과 테이블 업데이트 순서 통일(inventory -> product_stat)
@@ -199,18 +200,6 @@ public class OrderItemService {
             log.error("주문항목 취소의 주문 수 감소가 1행이 아닙니다. productId = {}, updatedCount = {}",
                     productId, updatedCount);
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
-        }
-    }
-
-    // 판매자도 취소할 수 있으므로 세션 사용자가 아니라 주문의 구매자로 쿠폰을 찾는다
-    private void restoreUsedCoupon(OrderItem orderItem, Long couponIssuedId) {
-        Long buyerId = orderItem.getOrder().getBuyer().getId();
-        try {
-            couponService.restoreCouponIssued(couponIssuedId, buyerId, Instant.now());
-        } catch (AppException e) {
-            log.error("주문항목 취소의 쿠폰 복구 실패. orderItemId = {}, couponIssuedId = {}, buyerId = {}, errorCode = {}",
-                    orderItem.getId(), couponIssuedId, buyerId, e.getErrorCode().code());
-            throw e;
         }
     }
 
