@@ -1,6 +1,6 @@
 # inventory — 상품별 재고
 
-재고 규칙은 `docs/business-rules.md`의 "재고"에, 락 순서 규칙은 `docs/standards.md`의 "트랜잭션·동시성"에 있다.
+재고 규칙은 `docs/business-rules.md`의 "재고"에, 락 순서와 조건부 차감 규칙은 `docs/standards.md`의 "트랜잭션·동시성"에 있다.
 
 ## 담당하지 않는 것
 - 주문 흐름에서 언제 차감하고 복구하는지(order가 호출)
