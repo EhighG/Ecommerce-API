@@ -9,6 +9,7 @@ import com.ecommerce.api.inventory.repository.InventoryRepository;
 import com.ecommerce.api.order.vo.OrderLine;
 import com.ecommerce.api.product.entity.Product;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.util.Map;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Service
@@ -59,7 +61,10 @@ public class InventoryService {
     @Transactional
     public void restore(Long productId, int quantity) {
         Inventory inventory = inventoryRepository.findByProductIdForUpdate(productId)
-                        .orElseThrow(() -> new AppException(NO_INVENTORY_FOR_PRODUCT));
+                .orElseThrow(() -> {
+                    log.error("재고 복구 대상 상품의 재고 행이 없습니다. productId = {}", productId);
+                    return new AppException(NO_INVENTORY_FOR_PRODUCT);
+                });
 
         inventory.adjust(quantity);
     }
@@ -67,7 +72,10 @@ public class InventoryService {
     @Transactional
     public void modifyInventory(ModifyInventoryReq req, Long userId) {
         Inventory inventory = inventoryRepository.findByProductIdForUpdate(req.productId())
-                .orElseThrow(() -> new AppException(NO_INVENTORY_FOR_PRODUCT));
+                .orElseThrow(() -> {
+                    log.error("재고 수정 대상 상품의 재고 행이 없습니다. productId = {}", req.productId());
+                    return new AppException(NO_INVENTORY_FOR_PRODUCT);
+                });
 
         if (inventory.getProduct().isDeleted())
             throw new AppException(DELETED_PRODUCT);

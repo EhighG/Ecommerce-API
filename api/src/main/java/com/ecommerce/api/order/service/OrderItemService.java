@@ -13,6 +13,7 @@ import com.ecommerce.api.product.repository.ProductStatRepository;
 import com.ecommerce.api.product.support.ProductImageUrlResolver;
 import com.ecommerce.api.user.enums.UserRole;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.Map;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Service
@@ -190,10 +192,13 @@ public class OrderItemService {
         }
 
         // 데드락 방지를 위해 주문생성과 테이블 업데이트 순서 통일(inventory -> product_stat)
-        inventoryService.restore(orderItem.getProduct().getId(), orderItem.getQuantity());
+        Long productId = orderItem.getProduct().getId();
+        inventoryService.restore(productId, orderItem.getQuantity());
 
-        int updatedCount = productStatRepository.increaseOrderItemCount(orderItem.getProduct().getId(), -1L);
+        int updatedCount = productStatRepository.increaseOrderItemCount(productId, -1L);
         if (updatedCount != 1) {
+            log.error("주문항목 취소의 주문 수 감소가 1행이 아닙니다. productId = {}, updatedCount = {}",
+                    productId, updatedCount);
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
         }
     }
