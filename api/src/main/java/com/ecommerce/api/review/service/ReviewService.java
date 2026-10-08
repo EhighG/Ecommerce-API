@@ -14,6 +14,7 @@ import com.ecommerce.api.user.dto.UserReviewListRes;
 import com.ecommerce.api.user.entity.User;
 import com.ecommerce.api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.List;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Service
@@ -48,6 +50,8 @@ public class ReviewService {
 
         int updatedCount = productStatRepository.addReview(product.getId(), req.halfStars());
         if (updatedCount != 1) {
+            log.error("리뷰 작성의 평점 통계 반영이 1행이 아닙니다. productId = {}, updatedCount = {}",
+                    product.getId(), updatedCount);
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
         }
 
@@ -135,8 +139,11 @@ public class ReviewService {
 
         if (deltaHalfStars == 0) return;
 
-        int updatedCount = productStatRepository.changeReviewRating(review.getProduct().getId(), deltaHalfStars);
+        Long productId = review.getProduct().getId();
+        int updatedCount = productStatRepository.changeReviewRating(productId, deltaHalfStars);
         if (updatedCount != 1) {
+            log.error("리뷰 수정의 평점 통계 반영이 1행이 아닙니다. productId = {}, updatedCount = {}",
+                    productId, updatedCount);
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
         }
     }

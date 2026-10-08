@@ -191,10 +191,13 @@ public class OrderItemService {
         }
 
         // 데드락 방지를 위해 주문생성과 테이블 업데이트 순서 통일(inventory -> product_stat)
-        inventoryService.restore(orderItem.getProduct().getId(), orderItem.getQuantity());
+        Long productId = orderItem.getProduct().getId();
+        inventoryService.restore(productId, orderItem.getQuantity());
 
-        int updatedCount = productStatRepository.increaseOrderItemCount(orderItem.getProduct().getId(), -1L);
+        int updatedCount = productStatRepository.increaseOrderItemCount(productId, -1L);
         if (updatedCount != 1) {
+            log.error("주문항목 취소의 주문 수 감소가 1행이 아닙니다. productId = {}, updatedCount = {}",
+                    productId, updatedCount);
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
         }
     }
