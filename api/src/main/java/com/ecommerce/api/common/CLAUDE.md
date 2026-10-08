@@ -13,7 +13,7 @@
 ## 알아둘 구현 방식
 - `ApiResponse`는 전체가 주석 처리된 파일이다. 응답을 감싸는 래퍼는 쓰지 않고, 성공 응답은 DTO나 ID를 그대로 보낸다.
 - `AppException(ErrorCode, String)`은 코드는 그대로 두고 메시지만 바꾼다. 응답 `message`에는 이 메시지가 나간다.
-- `Sha256Hasher`는 소문자 hex 64자를 만든다. 멱등 기록의 지문 컬럼 길이(64)와 맞춰져 있다.
+- `Sha256Hasher`는 소문자 hex 64자를 만든다. 멱등성 record의 지문 컬럼 길이(64)와 맞춰져 있다.
 - `openapi/`: 명세 첫머리, CSRF 보안 스킴, operationId, `@ApiErrorCode`를 오류 응답으로 바꾸는 코드(`OpenApiConfig`)와 오류 분기 어노테이션. 명세 생성 테스트(`WebLayerTestSupport`)는 이름에 `OpenApi`가 들어간 설정 클래스만 올리므로, 명세를 바꾸는 설정 클래스는 이 이름 규칙을 따른다.
 
 ## 테스트 기준

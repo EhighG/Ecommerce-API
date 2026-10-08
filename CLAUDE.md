@@ -22,6 +22,7 @@ Ecommerce-project/
 │   ├── api/                       → API 명세(코드에서 생성한 openapi.yaml)와 GitHub Pages용 Swagger UI 페이지
 │   ├── adr/                       → 결정 기록(index.md + 0001~0006)
 │   ├── cases/                     → 성과 사례 상세(부하테스트 측정값의 원본)
+│   ├── research/                  → 1차 출처 조사(결정과 계약의 근거 자료)
 │   ├── assets/                    → 기존 다이어그램 이미지
 │   ├── agents/                    → 스킬 설정(이슈 트래커, 트리아지 라벨, 도메인 문서 위치)
 │   └── tracking/
@@ -41,7 +42,7 @@ Ecommerce-project/
 │       ├── order/CLAUDE.md        → 주문 생성(멱등), 주문항목 상태 전이·취소
 │       ├── coupon/CLAUDE.md       → 쿠폰 이벤트, Redis 선착순 발급, 사용·복구
 │       ├── review/CLAUDE.md       → 리뷰, 평점 통계
-│       ├── idempotency/CLAUDE.md  → 멱등 키 기록
+│       ├── idempotency/CLAUDE.md  → 멱등성 record
 │       └── common/CLAUDE.md       → 오류 코드, 전역 예외 처리, 공통 설정
 ├── k6/CLAUDE.md                   → 부하테스트 스크립트
 ├── infra/                         → 부하테스트 자동화 스크립트, 후보 데이터 SQL

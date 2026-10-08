@@ -3,7 +3,7 @@
 주문 생성의 전체 흐름(멱등 트랜잭션 구성, 처리 순서)과 취소의 락 순서는 `docs/architecture.md`의 "대표 흐름"에, 금액·상태 규칙은 `docs/business-rules.md`에 있다.
 
 ## 담당하지 않는 것
-- 멱등 기록 저장과 판정(idempotency 패키지)
+- 멱등성 record 저장과 판정(idempotency 패키지)
 - 할인 계산과 쿠폰 상태 변경(`CouponEvent`, `CouponIssued`)
 - 재고 SQL(`InventoryJdbcRepository`)
 - 통계 SQL(`ProductStatJdbcRepository`, `ProductStatRepository`)
@@ -29,7 +29,7 @@
 ## 테스트 기준
 이 패키지를 바꾸면 아래를 테스트한다.
 - 통합 테스트(`OrderServiceIntegrationTestSupport`)로 확인할 것:
-  - 첫 요청 성공과 멱등 기록 `SUCCEEDED`
+  - 첫 요청 성공과 멱등성 record `SUCCEEDED`
   - 같은 키·같은 내용의 재응답(부수효과 없음)
   - 같은 키·다른 내용은 `9102`
   - 처리 중이면 `9103`

@@ -31,7 +31,7 @@ class IdempotentOrderPlacementServiceTest extends OrderServiceIntegrationTestSup
     private OrderRequestFingerprintGenerator orderRequestFingerprintGenerator;
 
     @Test
-    @DisplayName("주문 생성 최초 요청은 주문을 생성하고 멱등성 기록을 성공 상태로 저장한다")
+    @DisplayName("주문 생성 최초 요청은 주문을 생성하고 멱등성 record를 성공 상태로 저장한다")
     void givenValidOrderRequest_whenPlaceOrderFirstTime_thenCreateOrderAndSucceededRecord() {
         // given
         OrderFixture fixture = createOrderFixtureWithCoupon(10, 2);
@@ -136,7 +136,7 @@ class IdempotentOrderPlacementServiceTest extends OrderServiceIntegrationTestSup
     }
 
     @Test
-    @DisplayName("주문 생성 본 로직이 실패하면 처리 중 멱등성 기록을 정리한다")
+    @DisplayName("주문 생성 본 로직이 실패하면 처리 중 멱등성 record를 정리한다")
     void givenBusinessFailure_whenPlaceOrder_thenDeleteProcessingRecord() {
         // given
         OrderFixture fixture = createOrderFixtureWithoutCoupon(0, 1);
