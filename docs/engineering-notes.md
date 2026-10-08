@@ -21,6 +21,16 @@
 - **해결**: 두 경로가 같은 락 순서를 따르게 했다. 규칙은 `standards.md`의 "트랜잭션·동시성"에 있다.
 - **확인**: 주문·취소를 섞은 k6 시나리오를 돌리고 MySQL `SHOW ENGINE INNODB STATUS`의 LATEST DETECTED DEADLOCK이 새로 생기지 않는지 본다.
 
+### JPA에서는 호출 순서대로 락이 잡히지 않는다
+- **증상**: 코드의 호출 순서는 맞는데 실제 락 순서가 다르다.
+- **원인**: 일반 SELECT는 락을 잡지 않는다. 변경 감지로 바꾼 엔티티의 UPDATE는 flush 때(보통 커밋 때) 나가고, 락도 그때 잡힌다.
+- **해결**: 먼저 잠가야 하는 행은 읽을 때 잠근다.
+- **확인**: Hibernate SQL 로그를 켜고 테스트를 돌려 SQL 순서를 본다.
+  - `SPRING_APPLICATION_JSON='{"logging.level.org.hibernate.SQL":"DEBUG"}' ./gradlew cleanTest test --tests '…'`
+  - 로그는 `api/build/test-results/test/`의 XML에 남는다.
+  - `LOGGING_LEVEL_ORG_HIBERNATE_SQL` 환경변수는 동작하지 않는다. Spring이 로거 이름을 소문자(`org.hibernate.sql`)로 바꾸기 때문이다.
+  - `cleanTest`를 빼면 Gradle이 환경변수만 바뀐 테스트를 다시 돌리지 않는다.
+
 ### 커넥션 대기가 쌓인다고 풀 크기를 늘리면 더 느려진다
 - **증상**: HikariCP pending이 수백까지 쌓이고, 획득 대기가 1초를 넘는다.
 - **원인**: 병목은 API VM의 CPU였다. 요청 하나가 DB를 많이 호출할수록 JPA·JDBC 처리 비용이 커진다.
