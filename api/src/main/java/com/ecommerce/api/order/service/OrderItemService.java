@@ -13,6 +13,7 @@ import com.ecommerce.api.product.repository.ProductStatRepository;
 import com.ecommerce.api.product.support.ProductImageUrlResolver;
 import com.ecommerce.api.user.enums.UserRole;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.Map;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
 
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Service
@@ -185,8 +187,7 @@ public class OrderItemService {
         // 사용했던 쿠폰 있으면 복구
         OrderItemCoupon usedCoupon = orderItemCouponService.findByOrderItemId(orderItemId);
         if (usedCoupon != null) {
-            Long couponIssuedId = usedCoupon.getUsedCoupon().getCouponIssuedId();
-            couponService.restoreCouponIssued(couponIssuedId, Instant.now());
+            restoreUsedCoupon(orderItem, usedCoupon.getUsedCoupon().getCouponIssuedId());
         }
 
         // 데드락 방지를 위해 주문생성과 테이블 업데이트 순서 통일(inventory -> product_stat)
@@ -195,6 +196,18 @@ public class OrderItemService {
         int updatedCount = productStatRepository.increaseOrderItemCount(orderItem.getProduct().getId(), -1L);
         if (updatedCount != 1) {
             throw new AppException(PRODUCT_STAT_NOT_FOUND);
+        }
+    }
+
+    // 판매자도 취소할 수 있으므로 세션 사용자가 아니라 주문의 구매자로 쿠폰을 찾는다
+    private void restoreUsedCoupon(OrderItem orderItem, Long couponIssuedId) {
+        Long buyerId = orderItem.getOrder().getBuyer().getId();
+        try {
+            couponService.restoreCouponIssued(couponIssuedId, buyerId, Instant.now());
+        } catch (AppException e) {
+            log.error("주문항목 취소의 쿠폰 복구 실패. orderItemId = {}, couponIssuedId = {}, buyerId = {}, errorCode = {}",
+                    orderItem.getId(), couponIssuedId, buyerId, e.getErrorCode().code());
+            throw e;
         }
     }
 

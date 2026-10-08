@@ -54,6 +54,22 @@ class OrderItemServiceCancelTest extends OrderServiceIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("판매자가 쿠폰을 쓴 주문항목을 취소하면 구매자의 쿠폰을 복구한다")
+    void givenCouponUsedOrderItem_whenSellerCancel_thenRestoreBuyerCoupon() {
+        // given
+        PlacedOrder placedOrder = placeOrderWithCoupon();
+
+        // when
+        orderItemService.cancel(placedOrder.orderItemId(), placedOrder.fixture().sellerId());
+
+        // then
+        assertThat(orderItemStatus(placedOrder.orderItemId())).isEqualTo(CANCELED);
+        assertThat(inventoryQuantity(placedOrder.fixture().productId())).isEqualTo(10);
+        assertThat(productOrderItemCount(placedOrder.fixture().productId())).isZero();
+        assertThat(couponStatus(placedOrder.fixture().couponIssuedId())).isEqualTo(ISSUED);
+    }
+
+    @Test
     @DisplayName("이미 취소된 주문항목을 다시 취소하면 성공 처리하고 복구 부수효과를 반복하지 않는다")
     void givenAlreadyCanceledOrderItem_whenCancelAgain_thenSucceedWithoutRepeatedSideEffects() {
         // given
