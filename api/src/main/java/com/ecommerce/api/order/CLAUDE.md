@@ -1,6 +1,6 @@
 # order — 주문 생성, 조회, 주문항목 상태 전이·취소
 
-주문 생성의 전체 흐름(멱등 트랜잭션 구성, 처리 순서)과 취소의 락 순서는 `docs/architecture.md`의 "대표 흐름"에, 금액·상태 규칙은 `docs/business-rules.md`에 있다.
+주문 생성의 전체 흐름(멱등 트랜잭션 구성, 처리 순서)은 `docs/architecture.md`의 "대표 흐름"에, 락 순서 규칙은 `docs/standards.md`의 "트랜잭션·동시성"에, 금액·상태 규칙은 `docs/business-rules.md`에 있다.
 
 ## 담당하지 않는 것
 - 멱등성 record 저장과 판정(idempotency 패키지)
