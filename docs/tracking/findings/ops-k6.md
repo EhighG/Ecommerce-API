@@ -1,11 +1,5 @@
 # 미해결 문제: 운영·빌드·k6
 
-## 로컬 빌드 산출물에 비밀 설정 파일이 포함된다
-- **조건**: 로컬에서 `./gradlew bootJar`나 `docker build`를 실행한다.
-- **증상**: `src/main/resources/application-secret.yaml`(DB·Redis 비밀번호, GCP 설정)이 jar와 이미지 안에 들어간다. `api/.dockerignore`가 없다.
-- **영향**: 로컬 이미지를 레지스트리에 올리거나 jar를 공유하면 자격 증명이 유출된다.
-- **지금 해결하지 않는 이유**: 비밀 파일 위치를 옮길지(리소스 밖 외부 경로로 import), `.dockerignore`와 `bootJar` 제외 설정을 둘지 결정해야 한다.
-
 ## 스케줄 작업 두 개가 스케줄러 스레드 하나를 함께 쓴다
 - **증상**: 쿠폰 캐시 적재(`CouponEventCacheScheduler`)와 조회수 반영(`ProductViewCountService`)은 둘 다 `@Scheduled(fixedDelay = 30_000)`이다(이전 실행이 끝나고 30초 뒤 다시 실행). 스케줄러 스레드 수 설정(`spring.task.scheduling.pool.size`)과 가상 스레드 설정이 없어서, Spring Boot 기본값인 스레드 1개를 두 작업이 함께 쓴다(기본값 근거 추정, 실행 확인 안 함).
 - **영향**: 한 작업이 오래 걸리면 다른 작업이 밀린다. 예를 들어 조회수 반영이 Redis·DB 지연으로 쿠폰 이벤트 시작 시각을 넘겨 스레드를 붙잡으면, 이벤트가 캐시에 올라가지 않아 발급이 `7503`으로 거절된다. 조회수 반영은 한 번에 처리할 양에 상한이 있어 평소에는 드물다.
