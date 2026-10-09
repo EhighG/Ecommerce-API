@@ -12,6 +12,7 @@ import com.ecommerce.api.coupon.repository.CouponIssuedRepository;
 import com.ecommerce.api.user.entity.User;
 import com.ecommerce.api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.ecommerce.api.common.exception.ErrorCode.*;
+import static com.ecommerce.api.coupon.enums.CouponStatus.USED;
 
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Service
@@ -132,10 +135,20 @@ public class CouponService {
                 .orElseThrow(() -> new AppException(COUPON_EVENT_NOT_FOUND));
     }
 
+    // 복구 대상은 사용한 주문항목이 취소되기 전까지 USED여야 한다. 아니면 데이터 이상이라 500으로 응답한다.
     @Transactional
     public void restoreCouponIssued(Long couponIssuedId, Instant now) {
         CouponIssued couponIssued = couponIssuedRepository.findById(couponIssuedId)
-                .orElseThrow(() -> new AppException(COUPON_ISSUED_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.error("복구 대상 발급 쿠폰이 없습니다. couponIssuedId = {}", couponIssuedId);
+                    return new AppException(COUPON_RESTORE_FAILED);
+                });
+
+        if (couponIssued.getStatus() != USED) {
+            log.error("복구 대상 발급 쿠폰이 사용 상태가 아닙니다. couponIssuedId = {}, status = {}",
+                    couponIssuedId, couponIssued.getStatus());
+            throw new AppException(COUPON_RESTORE_FAILED);
+        }
 
         couponIssued.restore(now);
     }

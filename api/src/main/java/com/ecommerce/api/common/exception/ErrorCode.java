@@ -58,6 +58,7 @@ public enum ErrorCode {
     COUPON_EVENT_CACHING_FAILED(INTERNAL_SERVER_ERROR, "7508", "쿠폰 이벤트 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
     DUPLICATED_COUPON(BAD_REQUEST, "7509", "같은 쿠폰은 중복 사용할 수 없습니다."),
     COUPON_ISSUED_NOT_FOUND(NOT_FOUND, "7510", "해당 쿠폰을 찾을 수 없습니다."),
+    COUPON_RESTORE_FAILED(INTERNAL_SERVER_ERROR, "7511", "쿠폰 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
 
     // 8xxx: Media
     MEDIA_OBJECT_NOT_FOUND(NOT_FOUND, "8000", "업로드된 파일을 찾을 수 없습니다."),

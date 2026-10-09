@@ -77,8 +77,9 @@ public class CouponIssued extends BaseTimeEntity {
     }
 
     public void restore(Instant now) {
+        // 호출하는 쪽(CouponService.restoreCouponIssued)이 먼저 검사한다. 여기는 방어 코드다.
         if (status != USED) {
-            throw new AppException(INVALID_COUPON_STATUS, "사용된 쿠폰이 아닙니다.");
+            throw new IllegalStateException("사용된 쿠폰이 아닙니다. couponIssuedId = " + id);
         }
 
         if (!now.isBefore(expiresAt)) {
