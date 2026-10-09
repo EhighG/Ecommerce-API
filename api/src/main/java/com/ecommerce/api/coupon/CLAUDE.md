@@ -32,6 +32,6 @@
 ## 테스트 기준
 이 패키지를 바꾸면 아래를 테스트한다.
 - 할인 계산(정액, 정률 버림, 최대 할인액 상한, 금액 상한, 금액 0 거절)은 단위 테스트로 한다.
-- `use` / `restore`: 만료 전 복구 → `ISSUED`, 만료 후 복구 → `EXPIRED`, `USED`가 아닌 쿠폰 복구 → `INVALID_COUPON_STATUS`.
+- `use` / `restore`: 만료 전 복구 → `ISSUED`, 만료 후 복구 → `EXPIRED`. 복구할 발급 쿠폰이 없거나 `USED`가 아니면 → `COUPON_RESTORE_FAILED`(500, 데이터 이상이라 `restoreCouponIssued`가 로그를 남긴다).
 - 발급은 Redis 스크립트와 DB 보상이 얽혀 있다. 통합 테스트에 Redis(Testcontainers)를 추가해야 제대로 검증할 수 있다. 현재 통합 설정은 캐시 서비스를 mock으로 둔다.
 - 경계 사례: 수량 1개에 동시 요청 N개면 1명만 성공해야 한다. Redis 재적재 직후 기존 발급자가 요청하면 `7506`(남은 수량이 0이면 `7507`)이고 수량은 그대로여야 한다.

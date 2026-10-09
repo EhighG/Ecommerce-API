@@ -14,6 +14,7 @@ import com.ecommerce.api.product.entity.Product;
 import com.ecommerce.api.product.service.ProductService;
 import com.ecommerce.api.user.entity.User;
 import com.ecommerce.api.user.service.UserService;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -49,6 +50,7 @@ class CartItemServiceTest {
     CartItemService cartItemService;
 
     @Test
+    @DisplayName("장바구니에 없는 상품을 담으면 새 항목을 저장하고 그 ID를 반환한다")
     void addItem_withNewProduct_savesNewCartItemAndReturnsSavedId() {
         // given
         Long userId = 1L;
@@ -84,6 +86,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("장바구니에 있는 상품을 담으면 기존 항목의 수량을 늘리고 그 ID를 반환한다")
     void addItem_withExistingProduct_increasesQuantityAndReturnsExistingId() {
         // given
         Long userId = 1L;
@@ -112,6 +115,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("사용자가 없으면 장바구니에 담지 않고 오류를 반환한다")
     void addItem_whenUserNotFound_throwsExceptionAndDoesNotSaveCartItem() {
         // given
         Long userId = 1L;
@@ -130,6 +134,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("상품이 없으면 장바구니에 담지 않고 오류를 반환한다")
     void addItem_whenProductNotFound_throwsExceptionAndDoesNotSaveCartItem() {
         // given
         Long userId = 1L;
@@ -149,6 +154,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("같은 상품을 동시에 담아 유니크 제약에 걸리면 장바구니 충돌 오류를 반환한다")
     void addItem_whenDuplicateCartItemConflictOccurs_throwsCartItemConflict() {
         // given
         Long userId = 1L;
@@ -171,6 +177,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("썸네일이 있는 상품은 썸네일 URL을 함께 반환한다")
     void findCartItems_withThumbnail_returnsCartItemsWithThumbnailUrl() {
         // given
         Long userId = 1L;
@@ -204,6 +211,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("썸네일이 없는 상품은 썸네일 URL 없이 반환한다")
     void findCartItems_withoutThumbnail_returnsCartItemsWithoutThumbnailUrl() {
         // given
         Long userId = 1L;
@@ -234,6 +242,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("장바구니 항목이 있으면 수량을 바꾼다")
     void changeQuantity_whenCartItemExists_changesQuantity() {
         // given
         Long userId = 1L;
@@ -255,6 +264,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("사용자가 없으면 장바구니 항목을 조회하지 않고 오류를 반환한다")
     void changeQuantity_whenUserNotFound_throwsExceptionAndDoesNotFindCartItem() {
         // given
         Long userId = 1L;
@@ -272,6 +282,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("장바구니 항목이 없으면 수량 변경에서 항목 없음 오류를 반환한다")
     void changeQuantity_whenCartItemNotFound_throwsCartItemNotFound() {
         // given
         Long userId = 1L;
@@ -290,6 +301,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("장바구니 항목이 있으면 삭제한다")
     void removeItem_whenCartItemExists_deletesCartItem() {
         // given
         Long userId = 1L;
@@ -309,6 +321,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("사용자가 없으면 장바구니 항목을 삭제하지 않고 오류를 반환한다")
     void removeItem_whenUserNotFound_throwsExceptionAndDoesNotDelete() {
         // given
         Long userId = 1L;
@@ -325,6 +338,7 @@ class CartItemServiceTest {
     }
 
     @Test
+    @DisplayName("장바구니 항목이 없으면 삭제하지 않고 항목 없음 오류를 반환한다")
     void removeItem_whenCartItemNotFound_throwsCartItemNotFoundAndDoesNotDelete() {
         // given
         Long userId = 1L;
