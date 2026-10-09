@@ -50,7 +50,7 @@ app:
   loadtest:
     auth:
       enabled: ${LOADTEST_AUTH_ENABLED:false}
-      secret: ${LOADTEST_AUTH_SECRET}
+      secret: ${LOADTEST_AUTH_SECRET:}
 
 management:
   metrics:
