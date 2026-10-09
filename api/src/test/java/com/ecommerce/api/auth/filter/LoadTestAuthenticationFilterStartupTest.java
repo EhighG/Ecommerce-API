@@ -24,7 +24,7 @@ class LoadTestAuthenticationFilterStartupTest {
 
     private static final String AUTH_ENABLED = "app.loadtest.auth.enabled=true";
 
-    // 개발자 PC나 CI에 LOADTEST_AUTH_SECRET 같은 환경변수가 있어도 결과가 바뀌지 않게, 설정 파일 외의 값은 모두 막는다
+    // 개발자 PC나 CI에 LOADTEST_AUTH_SECRET 같은 환경변수가 있어도 결과가 바뀌지 않게, OS 환경변수와 System 프로퍼티는 읽지 않는다
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withInitializer(context -> {
                 context.getEnvironment().getPropertySources().remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME);
