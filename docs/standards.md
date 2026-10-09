@@ -23,10 +23,13 @@
 
 ## 커밋·브랜치
 
-- 커밋 메시지는 `유형: 한국어 요약` 형식이다. 유형은 `Feat`, `Fix`, `Refactor`, `Test`, `Chore`, `Docs` 중 하나다. 작업 브랜치를 `develop`에 합칠 때 생기는 병합 커밋은 이 형식의 예외다.
+- 커밋 메시지는 `유형: 한국어 요약` 형식이다. 유형은 `Feat`, `Fix`, `Refactor`, `Test`, `Chore`, `Docs` 중 하나다. `develop`에 들어가는 squash 커밋도 같은 형식이다.
 - 브랜치
   - 작업 브랜치는 `develop`에서 딴다. 이름은 `feature/…`, `refactor/…`, `test/…`, `chore/…`, `fix/…`, `docs/…` 중 하나다.
-  - 작업 브랜치는 `develop`에 병합 커밋으로 합친다.
+  - 작업 브랜치는 `develop`에 squash 병합으로 합친다. 저장소 설정이 squash 병합만 허용한다.
+    - PR 하나가 `develop`의 커밋 하나가 된다. PR 범위는 프로젝트 전체에서 봤을 때 커밋 하나로 읽히는 작업 단위로 잡는다.
+    - PR 제목이 커밋 제목, PR 본문이 커밋 본문이 된다. PR 제목은 `유형: 한국어 요약` 형식으로 쓴다. 브랜치의 세부 커밋은 PR에만 남는다.
+    - 병합한 브랜치는 지운다. 이어서 작업하려면 `develop`에서 새로 딴다. squash 뒤에 같은 브랜치에서 이어서 작업하면 이미 들어간 변경이 충돌한다.
   - `release`는 "배포된 지점"을 표시하는 데만 쓴다. 배포할 때 `develop`으로 fast-forward만 하고, squash 병합이나 `develop`으로의 역병합은 하지 않는다. 배포한 커밋에는 `deploy-YYYY-MM-DD` 태그를 붙인다.
 - 배포는 `release`를 기준으로 GitHub Actions 워크플로를 수동으로 실행해서 한다. push로는 자동 배포되지 않는다. 절차는 [`operations.md`](operations.md)의 "배포"에 있다.
 
