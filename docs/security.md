@@ -71,8 +71,8 @@ URL 단계(보안 필터)에서 역할을 확인하고, 서비스 단계에서 �
 - 관리 포트(8090)의 `health`와 `prometheus`는 인증 없이 열려 있다. 이 포트는 인프라 방화벽에서 모니터링 수집기만 접근하게 막는다. 관리 포트를 외부에 여는 것은 금지다.
 - **부하테스트용 인증 우회**
   - 동작 방식: `X-LoadTest-User-Id`와 `X-LoadTest-Secret` 헤더로 로그인 없이 해당 사용자로 인증하고, 그 요청의 CSRF 검사를 건너뛴다.
-  - 켜지는 조건: `loadtest` 프로필이 활성화되어 있고 `app.loadtest.auth.enabled=true`여야 한다. 켜졌는데 비밀값이 빈 문자열이면 서버가 시작되지 않는다.
-  - 우회를 켤 때는 반드시 추측할 수 없는 비밀값을 명시적으로 설정한다. 환경변수를 빠뜨리면 공개된 문자열이 비밀값이 되는 결함이 있다(`docs/tracking/findings/auth-user.md`).
+  - 켜지는 조건: `loadtest` 프로필이 활성화되어 있고 `app.loadtest.auth.enabled=true`여야 한다. 켜졌는데 비밀값이 비어 있거나(`LOADTEST_AUTH_SECRET`을 빠뜨린 경우 포함) 16자 미만이면 서버가 시작되지 않는다.
+  - 우회를 켤 때는 반드시 추측할 수 없는 비밀값을 명시적으로 설정한다. 길이 제한은 최소 조건일 뿐이다.
   - 실패 처리: 비밀값이 틀리거나, 사용자 ID 형식이 틀리거나, 탈퇴한 사용자면 401이다. 헤더가 있으면 세션이 있어도 비밀값부터 검사한다.
   - **실제 사용자가 있는 환경에서는 절대 켜지 않는다.** 부하테스트 환경에서만 쓴다.
 - CORS는 `http://localhost:3000`에서 쿠키를 포함한 요청만 허용한다.
@@ -84,7 +84,7 @@ URL 단계(보안 필터)에서 역할을 확인하고, 서비스 단계에서 �
 | 사용자 비밀번호 | 가입·변경 시 BCrypt 해시로 `users.password`에 저장. 원문은 저장하지 않고 로그도 남기지 않는다 | 변경 시 덮어씀. 탈퇴 후에도 해시는 남음(숨김 삭제) |
 | 로그인 세션 | `GET /auth/csrf`에서 Redis `ecommerce:session`에 생기고, 로그인은 같은 세션을 인증 상태로 만든다. 세션에는 principal(`CustomUserDetails`)이 Java 직렬화되어 들어간다. 비밀번호 해시도 함께 들어가는 결함은 `docs/tracking/findings/auth-user.md`에 있다 | 30분 무활동 만료. 로그아웃과 비밀번호 변경·탈퇴 때의 폐기 범위는 위 "세션 종료". Redis를 잃으면 모든 세션이 사라져 전원 재로그인 |
 | CSRF 토큰 | 세션에 저장 | 세션과 수명이 같다 |
-| DB·Redis 비밀번호, GCP 설정 | 로컬은 커밋되지 않는 `application-secret.yaml`, 클라우드는 인스턴스 환경변수. **로컬에서 만든 jar나 이미지는 외부로 내보내지 않는다.** 비밀 설정 파일이 그 안에 들어간다(`docs/tracking/findings/ops-k6.md`). 배포 이미지는 배포 워크플로에서만 만든다 | 교체하려면 설정을 바꾸고 재시작 |
+| DB·Redis 비밀번호, GCP 설정 | 로컬은 커밋되지 않는 `application-secret.yaml`, 클라우드는 인스턴스 환경변수. **로컬에서 만든 jar나 이미지는 비밀 설정 파일을 공유한 신뢰 환경 밖으로 내보내지 않는다.** 그 안에 비밀 설정 파일이 들어가며, 이 전제로 두는 의도된 방식이다. 배포 이미지는 배포 워크플로에서만 만든다 | 교체하려면 설정을 바꾸고 재시작 |
 | GCP 서비스 계정 | Application Default Credentials(환경변수 `GOOGLE_APPLICATION_CREDENTIALS`가 가리키는 키 파일, 또는 VM 서비스 계정) | 키 파일은 저장소에 두지 않는다 |
 | 배포 인증 | GitHub Actions → GCP Workload Identity 연동(장기 키 없음) | — |
 | 부하테스트 비밀값 | `LOADTEST_AUTH_SECRET` 환경변수 | 부하테스트 환경에만 둔다 |

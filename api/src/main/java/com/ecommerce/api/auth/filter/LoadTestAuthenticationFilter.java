@@ -32,6 +32,7 @@ public class LoadTestAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String USER_ID_HEADER = "X-LoadTest-User-Id";
     private static final String SECRET_HEADER = "X-LoadTest-Secret";
+    private static final int MIN_SECRET_LENGTH = 16;
 
     private final LoadTestAuthProperties properties;
     private final UserService userService;
@@ -42,8 +43,15 @@ public class LoadTestAuthenticationFilter extends OncePerRequestFilter {
 
     @PostConstruct
     void validate() {
-        if (properties.enabled() && StringUtils.isBlank(properties.secret())) {
+        if (!properties.enabled()) {
+            return;
+        }
+        // 오류 메시지에 비밀값을 넣지 않는다
+        if (StringUtils.isBlank(properties.secret())) {
             throw new IllegalStateException("LoadTest Auth 사용 시 LOADTEST_AUTH_SECRET 필수");
+        }
+        if (properties.secret().length() < MIN_SECRET_LENGTH) {
+            throw new IllegalStateException("LOADTEST_AUTH_SECRET은 " + MIN_SECRET_LENGTH + "자 이상이어야 한다");
         }
     }
 
